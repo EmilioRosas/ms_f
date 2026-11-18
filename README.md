@@ -13,6 +13,9 @@ microservicios/
 └── frontend/      ← este proyecto (independiente, su propio package.json)
 ```
 
+**[Cómo funciona el proyecto](docs/funcionamiento.md)**: piezas del sistema, flujo de inicio de
+sesión, recorrido de una petición, endpoints, seguridad, arranque paso a paso y problemas comunes.
+
 ## Arranque
 
 ```bash
@@ -81,10 +84,11 @@ navegador → :3000 (proxy Vite) ─┬─ /oauth2/token ───────�
 En desarrollo, Vite hace de proxy (`vite.config.ts`), así que **no hace falta configurar CORS**.
 Orden de arranque: `server` y `apigateway` primero, luego `ms-a` y `ms-b` (se registran en Eureka).
 
-## Cambio necesario en `server` (SecurityConfig.java)
+## Cliente del frontend en `server` (SecurityConfig.java)
 
-El cliente actual `client-app` usa secreto y redirige a Postman; un navegador no puede guardar secretos.
-Hay que registrar un **cliente público con PKCE**:
+El cliente `client-app` usa secreto y redirige a Postman; un navegador no puede guardar secretos.
+Por eso `server` registra además un **cliente público con PKCE**, ya incluido en
+`registeredClientRepository()`:
 
 ```java
 RegisteredClient frontendClient = RegisteredClient.withId(UUID.randomUUID().toString())

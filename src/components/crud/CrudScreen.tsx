@@ -2,14 +2,18 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import Icon from '../Icon';
 import { useCrudResource } from '../../hooks/useCrudResource';
 import { errorText } from '../../api/httpClient';
-import type { CrudApi } from '../../types';
+import { msaApi } from '../../api/msaApi';
+import type { CrudApi, EntityA } from '../../types';
 
 import '../../styles/crud.css';
 
 const MAX_LEN = 120;
 
 /** Registro { id, <field> } de MS-A (nombreA) o MS-B (nombreB). */
-type Row<F extends string> = { id: number } & Record<F, string>;
+type Row<F extends string> = { id: number; entityAId?: number | null } & Record<F, string>;
+
+/** '' (sin A) o ID en texto → número o null. */
+const toAId = (v: string): number | null => (v ? Number(v) : null);
 
 interface Toast {
   kind: 'ok' | 'error';
@@ -46,12 +50,37 @@ interface CrudScreenProps<F extends string> {
   /** nombre del servicio para los mensajes */
   serviceName: string;
   placeholder: string;
+  /** MS-B: permite elegir la entidad A a la que pertenece cada registro (uno a muchos). */
+  withA?: boolean;
 }
 
 /** Pantalla CRUD genérica para un recurso { id, <field> } (MS-A, MS-B). */
-export default function CrudScreen<F extends string>({ api, field, prefix, title, serviceName, placeholder }: CrudScreenProps<F>) {
+export default function CrudScreen<F extends string>({ api, field, prefix, title, serviceName, placeholder, withA = false }: CrudScreenProps<F>) {
   const crud = useCrudResource(api);
   const { items, status, error, filter } = crud;
+
+  // Entidades A disponibles para relacionar (solo cuando withA).
+  const [aList, setAList] = useState<EntityA[]>([]);
+  const [aError, setAError] = useState<string | null>(null);
+  const [newA, setNewA] = useState('');
+  const [editA, setEditA] = useState('');
+  useEffect(() => {
+    if (!withA) return;
+    msaApi.listar().then(setAList).catch((e: unknown) => setAError(errorText(e)));
+  }, [withA]);
+  const aLabel = (id: number | null | undefined) => {
+    if (id == null) return 'Sin A';
+    const a = aList.find((x) => x.id === id);
+    return a ? `#${a.id} · ${a.nombreA}` : `#${id}`;
+  };
+  const aSelect = (id: string, value: string, onChange: (v: string) => void, label: string) => (
+    <select id={id} className="input" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
+      <option value="">Sin A</option>
+      {aList.map((a) => (
+        <option key={a.id} value={a.id}>#{a.id} · {a.nombreA}</option>
+      ))}
+    </select>
+  );
 
   const createRef = useRef<HTMLInputElement>(null);
   const [newName, setNewName] = useState('');
@@ -88,8 +117,9 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
     }
     setCreating(true);
     try {
-      const created = await crud.create(newName.trim());
+      const created = await crud.create(newName.trim(), withA ? toAId(newA) : undefined);
       setNewName('');
+      setNewA('');
       notify('ok', `Registro #${created.id} agregado.`);
     } catch (ex) {
       notify('error', errorText(ex));
@@ -119,6 +149,7 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
     setConfirmId(null);
     setEditingId(item.id);
     setEditValue(item[field] ?? '');
+    setEditA(item.entityAId != null ? String(item.entityAId) : '');
     setEditError(null);
   };
 
@@ -134,7 +165,7 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
     if (err) return;
     setBusyId(id);
     try {
-      await crud.update(id, editValue.trim());
+      await crud.update(id, editValue.trim(), withA ? toAId(editA) : undefined);
       setEditingId(null);
       notify('ok', `Registro #${id} guardado.`);
     } catch (ex) {
@@ -205,12 +236,14 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
                 aria-describedby={createError ? `${prefix}-new-error` : undefined}
                 autoComplete="off"
               />
+              {withA && aSelect(`${prefix}-new-a`, newA, setNewA, 'Entidad A del nuevo registro')}
               <button type="submit" className="btn btn--primary btn--sm" disabled={creating}>
                 {creating ? <span className="spinner" aria-hidden="true" /> : <Icon name="plus" size={16} />}
                 Agregar
               </button>
             </div>
             {createError && <span id={`${prefix}-new-error`} className="field-error">{createError}</span>}
+            {withA && aError && <span className="field-error">No se pudo cargar Entidad A: {aError}</span>}
           </form>
 
           <form className="crud__form" onSubmit={onSearch} noValidate role="search">
@@ -286,6 +319,7 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
               <tr>
                 <th scope="col">ID</th>
                 <th scope="col">Nombre</th>
+                {withA && <th scope="col">Entidad A</th>}
                 <th scope="col" className="crud__actions"><span className="sr-only">Acciones</span></th>
               </tr>
             </thead>
@@ -295,6 +329,7 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
                     <tr key={i} aria-hidden="true">
                       <td className="crud__id"><div className="skel" style={{ width: 28 }} /></td>
                       <td><div className="skel" style={{ width: `${40 + i * 12}%` }} /></td>
+                      {withA && <td><div className="skel" style={{ width: 80 }} /></td>}
                       <td className="crud__actions"><div className="skel" style={{ width: 64 }} /></td>
                     </tr>
                   ))
@@ -335,6 +370,14 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
                             item[field]
                           )}
                         </td>
+
+                        {withA && (
+                          <td>
+                            {editing
+                              ? aSelect(`${prefix}-edit-a-${item.id}`, editA, setEditA, `Entidad A del registro ${item.id}`)
+                              : aLabel(item.entityAId)}
+                          </td>
+                        )}
 
                         <td className="crud__actions">
                           <div className="crud__actions-inner">

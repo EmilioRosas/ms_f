@@ -28,12 +28,15 @@ export interface EntityA {
 export interface EntityB {
   id: number;
   nombreB: string;
+  /** ID de la entidad A a la que pertenece (una A tiene muchas B); null = sin A. */
+  entityAId: number | null;
 }
 
 /** MS-B · /api/b/con-a (OpenFeign → MS-A) */
 export interface EntityBConA {
   id: number;
   nombreB: string;
+  entityAId: number | null;
   nombreA: string | null;
 }
 
@@ -41,8 +44,9 @@ export interface EntityBConA {
 export interface CrudApi<T extends { id: number }> {
   listar: () => Promise<T[]>;
   buscar: (id: number) => Promise<T>;
-  crear: (value: string) => Promise<T>;
-  actualizar: (id: number, value: string) => Promise<T>;
+  /** `entityAId` solo lo usa MS-B (relación con A). */
+  crear: (value: string, entityAId?: number | null) => Promise<T>;
+  actualizar: (id: number, value: string, entityAId?: number | null) => Promise<T>;
   eliminar: (id: number) => Promise<unknown>;
   porIds?: (ids: number[]) => Promise<T[]>;
 }

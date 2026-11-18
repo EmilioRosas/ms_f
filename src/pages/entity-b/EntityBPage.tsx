@@ -18,6 +18,7 @@ export default function EntityBPage() {
     <CrudScreen
       api={api}
       field="nombreB"
+      withA
       prefix="msb"
       title="Entidad B"
       serviceName="Entidad B"

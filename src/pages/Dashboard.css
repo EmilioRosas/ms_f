@@ -1,0 +1,45 @@
+.home { display: grid; gap: 32px; }
+.home__head h1 { font-size: var(--fs-3xl); line-height: 1.05; letter-spacing: -0.035em; overflow-wrap: anywhere; }
+
+.home__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 460px) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+/* Servicios: filas simples, no tarjetas */
+.services { display: grid; gap: 12px; }
+.services__top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.services__top h2 { font-size: var(--fs-lg); }
+.services__partial { display: block; }
+
+.services__list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.services__list li { border-bottom: 1px solid var(--line); }
+.services__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 24px;
+  padding: 16px 4px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 6px;
+}
+.services__row:hover .services__name { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
+.services__row:focus-visible { outline: none; box-shadow: var(--focus); }
+
+.services__name { font-weight: 700; font-size: var(--fs-base); }
+.services__value { font-size: var(--fs-sm); color: var(--text-2); text-align: right; font-variant-numeric: tabular-nums; }
+.services__error { font-size: var(--fs-sm); color: var(--err); text-align: right; max-width: 28ch; }
+.services__skel { display: inline-block; width: 96px; }
+
+@media (max-width: 960px) {
+  .home__grid { grid-template-columns: 1fr; gap: 32px; }
+}
+@media (max-width: 560px) {
+  .home__head h1 { font-size: var(--fs-2xl); }
+  .services__row { grid-template-columns: 1fr; gap: 4px; }
+  .services__value,
+  .services__error { text-align: left; }
+}

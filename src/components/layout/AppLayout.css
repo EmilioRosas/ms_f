@@ -1,0 +1,84 @@
+.shell { min-height: 100vh; display: flex; flex-direction: column; }
+
+/* Una fila en escritorio: marca · navegación · usuario */
+.shell__bar {
+  position: sticky; top: 0; z-index: 10;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "brand nav user";
+  align-items: center;
+  column-gap: 28px;
+  padding: 0 24px;
+  min-height: 60px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.shell__brand {
+  grid-area: brand;
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 600; white-space: nowrap;
+}
+/* Mini pase: talón cian + cuerpo, eco del pase de acceso */
+.shell__mark {
+  width: 22px; height: 14px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--cyan) 0 38%, var(--brand) 38% 100%);
+}
+
+.shell__nav {
+  grid-area: nav;
+  display: flex; gap: 2px; align-self: stretch;
+  min-width: 0; overflow-x: auto; scrollbar-width: none;
+}
+.shell__nav::-webkit-scrollbar { display: none; }
+.shell__nav a {
+  position: relative;
+  display: flex; align-items: center;
+  padding: 0 12px; white-space: nowrap;
+  color: var(--text-2); text-decoration: none; font-size: 15px;
+}
+.shell__nav a:hover { color: var(--text); }
+.shell__nav a:focus-visible { outline: none; box-shadow: inset var(--focus); border-radius: 6px; }
+.shell__nav a.active { color: var(--text); font-weight: 500; }
+.shell__nav a.active::after {
+  content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px;
+  height: 3px; border-radius: 3px 3px 0 0; background: var(--brand);
+}
+
+.shell__user {
+  grid-area: user;
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+}
+.shell__who {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  font-size: 14px; color: var(--text-2);
+}
+.shell__avatar {
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--cyan); color: #fff;
+  font-size: 13px; font-weight: 800; text-transform: uppercase;
+}
+.shell__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 16ch; }
+.shell__logout { min-height: 36px; padding: 0 12px; font-size: 14px; white-space: nowrap; }
+
+.shell__main { flex: 1; padding: 32px 24px; max-width: 1100px; width: 100%; margin: 0 auto; }
+
+/* Angosto: marca + usuario arriba, navegación completa abajo */
+@media (max-width: 720px) {
+  .shell__bar {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "brand user"
+      "nav   nav";
+    padding: 0 16px;
+    row-gap: 0;
+  }
+  .shell__brand, .shell__user { min-height: 56px; }
+  .shell__nav { margin: 0 -16px; padding: 0 4px; border-top: 1px solid var(--line); min-height: 44px; }
+  .shell__main { padding: 24px 16px; }
+}
+
+@media (max-width: 420px) {
+  .shell__name { display: none; }
+}

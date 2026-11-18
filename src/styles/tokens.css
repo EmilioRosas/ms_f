@@ -1,0 +1,95 @@
+/*
+ * Identidad: "el token es un pase de acceso".
+ * Paleta tomada del azul institucional UTEQ (portada de la práctica),
+ * fondo papel frío. Public Sans para la interfaz; JetBrains Mono solo
+ * para datos reales (token, IDs, endpoints).
+ */
+:root {
+  --font-sans: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  /* Escala tipográfica (razón ~1.25) */
+  --fs-xs: 13px;
+  --fs-sm: 14px;
+  --fs-base: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 26px;
+  --fs-2xl: 34px;
+  --fs-3xl: 44px;
+
+  /* Base */
+  --bg: #EEF2F7;          /* papel */
+  --surface: #FFFFFF;
+  --surface-2: #E3E9F1;
+  --line: #D2DAE5;
+  --text: #1B2638;        /* tinta */
+  --text-2: #4A5870;
+  --text-3: #66758C;
+
+  /* Marca */
+  --brand: #0B5FA5;       /* azul UTEQ */
+  --brand-hover: #094E88;
+  --brand-deep: #0A3A66;  /* panel del login */
+  --brand-deep-2: #0D4677;
+  --brand-deep-line: #2A5F92;
+  --on-deep: #EAF3FB;
+  --on-deep-2: #A9C6E2;
+  --cyan: #29A9E1;        /* el pase */
+  --cyan-soft: #DDF2FB;
+
+  /* Estados */
+  --ok: #1E8E5A;
+  --warn: #B26B00;
+  --err: #C4352B;
+  --ok-bg: #E2F3EA;
+  --warn-bg: #FBEFD9;
+  --err-bg: #FBE4E1;
+  --info-bg: #E1EEF9;
+
+  /* Alias que usa el resto de la app */
+  --info: var(--brand);
+  --accent: var(--cyan);
+  --ink: var(--brand-deep);
+  --ink-2: var(--brand-deep-2);
+  --ink-line: var(--brand-deep-line);
+  --ink-text: var(--on-deep);
+  --ink-text-2: var(--on-deep-2);
+  --primary-bg: var(--brand);
+  --primary-bg-hover: var(--brand-hover);
+  --primary-text: #FFFFFF;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --focus: 0 0 0 3px rgba(11, 95, 165, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0F1828;          /* azul marino, no negro */
+    --surface: #16223A;
+    --surface-2: #1D2B47;
+    --line: #2A3A58;
+    --text: #E6ECF5;
+    --text-2: #A9B6CC;
+    --text-3: #8494AD;
+
+    --brand: #5AA6E6;
+    --brand-hover: #79B8EC;
+    --brand-deep: #0B2440;
+    --brand-deep-2: #10304F;
+    --brand-deep-line: #24476E;
+    --cyan: #4CC0EE;
+    --cyan-soft: #12324A;
+
+    --ok: #4CC38A;
+    --warn: #E0A84A;
+    --err: #EE7D6B;
+    --ok-bg: #12301F;
+    --warn-bg: #33270F;
+    --err-bg: #3A1A16;
+    --info-bg: #142C47;
+
+    --primary-text: #0B1A2E;
+    --focus: 0 0 0 3px rgba(90, 166, 230, 0.45);
+  }
+}

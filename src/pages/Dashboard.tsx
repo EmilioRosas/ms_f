@@ -57,14 +57,14 @@ export default function Dashboard() {
       name: 'Entidad B',
       value: metric(stats?.b, (list) => plural(list.length, 'registro', 'registros')),
     },
-    {
-      to: '/combinado',
-      name: 'B con A',
-      value: metric(stats?.combo, (list) => {
-        const withA = list.filter((i) => i.nombreA && i.nombreA !== NO_A).length;
-        return list.length ? `${withA} de ${list.length} con dato de A` : 'Sin registros B';
-      }),
-    },
+    // {
+    //   to: '/combinado',
+    //   name: 'B con A',
+    //   value: metric(stats?.combo, (list) => {
+    //     const withA = list.filter((i) => i.nombreA && i.nombreA !== NO_A).length;
+    //     return list.length ? `${withA} de ${list.length} con dato de A` : 'Sin registros B';
+    //   }),
+    // },
   ];
 
   const partial = stats && Object.values(stats).some((r) => r.status === 'rejected');

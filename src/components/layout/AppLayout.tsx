@@ -12,7 +12,7 @@ const LINKS: NavItem[] = [
   { to: '/', label: 'Inicio', end: true },
   { to: '/entity-a', label: 'Entidad A' },
   { to: '/entity-b', label: 'Entidad B' },
-  { to: '/combinado', label: 'B con A' },
+  // { to: '/combinado', label: 'B con A' },
 ];
 
 // Layout privado: barra superior fija + contenido.

@@ -22,7 +22,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/entity-a" element={<EntityAPage />} />   {/* MS-A CRUD */}
           <Route path="/entity-b" element={<EntityBPage />} />   {/* MS-B CRUD */}
-          <Route path="/combinado" element={<CombinedPage />} /> {/* MS-B /con-a (Feign) */}
+          {/* <Route path="/combinado" element={<CombinedPage />} /> MS-B /con-a (Feign) */}
         </Route>
       </Route>
 

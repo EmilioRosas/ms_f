@@ -1,0 +1,97 @@
+/* Pantallas CRUD (MS-A, MS-B). */
+
+.crud { display: grid; gap: 20px; }
+
+.crud__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.crud__heading { display: grid; gap: 6px; }
+.crud__title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.crud__title h1 { font-size: var(--fs-2xl); }
+.crud__count { font-size: var(--fs-sm); color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+/* Panel: barra de herramientas + tabla */
+.crud__panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+
+.crud__toolbar {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  gap: 16px 24px; padding: 16px; border-bottom: 1px solid var(--line);
+}
+.crud__form { display: grid; gap: 6px; align-content: start; }
+.crud__form label { font-size: 13px; font-weight: 500; color: var(--text-2); }
+.crud__row { display: flex; gap: 8px; }
+.crud__row .input { flex: 1; min-width: 0; }
+
+.crud__filter {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 16px; font-size: 14px; background: var(--info-bg); border-bottom: 1px solid var(--line);
+}
+.crud__filter .mono { font-size: 13px; }
+.crud__filter-missing { color: var(--text-2); }
+
+/* Campos */
+.input {
+  height: 40px; padding: 0 12px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; font-size: 15px;
+}
+.input::placeholder { color: var(--text-3); }
+.input:focus { outline: none; border-color: var(--info); box-shadow: var(--focus); }
+.input[aria-invalid='true'] { border-color: var(--err); }
+.field-error { font-size: 13px; color: var(--err); }
+
+/* Botones extra */
+
+.icon-btn {
+  width: 36px; height: 36px; display: inline-grid; place-items: center;
+  border: 0; border-radius: 8px; background: transparent; color: var(--text-2); cursor: pointer;
+}
+.icon-btn:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.icon-btn--danger:hover:not(:disabled) { background: var(--err-bg); color: var(--err); }
+.icon-btn:focus-visible { outline: none; box-shadow: var(--focus); }
+.icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Tabla */
+.crud__table { width: 100%; border-collapse: collapse; }
+.crud__table th {
+  text-align: left; font-size: var(--fs-sm); font-weight: 600;
+  color: var(--text-2); padding: 10px 16px; border-bottom: 1px solid var(--line);
+}
+.crud__table td { padding: 10px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.crud__table tbody tr:last-child td { border-bottom: 0; }
+.crud__table tbody tr:hover { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+.crud__id { width: 88px; font-family: var(--font-mono); font-size: 13px; color: var(--text-3); white-space: nowrap; }
+.crud__name { overflow-wrap: anywhere; }
+.crud__actions { width: 1%; white-space: nowrap; text-align: right; }
+.crud__actions-inner { display: inline-flex; gap: 4px; align-items: center; }
+
+.crud__table tr.is-editing td { background: var(--info-bg); }
+.crud__table tr.is-danger td { background: var(--err-bg); }
+.crud__confirm { font-size: 14px; }
+.crud__confirm strong { font-weight: 600; }
+.crud__edit { display: grid; gap: 4px; }
+
+/* Estados */
+.crud__state { padding: 40px 16px; display: grid; justify-items: center; gap: 12px; text-align: center; }
+.crud__state p { color: var(--text-2); max-width: 44ch; }
+.crud__state-title { font-weight: 600; color: var(--text) !important; }
+
+
+/* Aviso flotante */
+.toast {
+  /* Centrado abajo: así no tapa la columna de acciones de la tabla */
+  position: fixed; left: 0; right: 0; bottom: 24px; z-index: 50;
+  width: fit-content; margin-inline: auto;
+  display: flex; align-items: center; gap: 10px; max-width: min(420px, calc(100vw - 32px));
+  padding: 12px 16px; border-radius: 8px; font-size: 14px;
+  background: var(--ink); color: var(--ink-text); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  animation: toast-in 0.18s ease-out;
+}
+.toast--ok svg { color: var(--accent); }
+.toast--error { background: var(--err); color: #fff; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+
+@media (max-width: 720px) {
+  .crud__toolbar { grid-template-columns: 1fr; }
+  .crud__title h1 { font-size: 24px; }
+  .crud__table th, .crud__table td { padding-left: 12px; padding-right: 12px; }
+  .crud__id { width: 56px; }
+  .toast { bottom: 16px; }
+}

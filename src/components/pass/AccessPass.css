@@ -1,0 +1,105 @@
+/*
+ * Pase de acceso. El "corte" de la perforación toma el color del fondo
+ * donde se coloca el pase: el contenedor puede redefinir --pass-cut.
+ */
+.pass {
+  --pass-cut: var(--bg);
+  --stub-w: 88px;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--stub-w) 1fr;
+  width: 100%;
+  max-width: 460px;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 0 var(--line), 0 12px 32px -18px rgba(11, 58, 102, 0.45);
+  isolation: isolate;
+}
+
+/* Talón */
+.pass__stub {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 16px 0 0 16px;
+  background: var(--cyan);
+  color: #fff;
+}
+.pass__initial {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+}
+
+/* Perforación: línea punteada + dos muescas */
+.pass__body {
+  position: relative;
+  padding: 24px 22px 20px;
+  border-left: 2px dashed var(--line);
+  min-width: 0;
+}
+.pass__body::before,
+.pass__body::after {
+  content: '';
+  position: absolute;
+  left: -11px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pass-cut);
+}
+.pass__body::before { top: -10px; }
+.pass__body::after { bottom: -10px; }
+
+.pass__holder {
+  padding-right: 88px; /* espacio para el sello */
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.pass__validity { margin-top: 20px; display: grid; gap: 6px; }
+.pass__bar { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.pass__bar span { display: block; height: 100%; border-radius: inherit; background: var(--cyan); transition: width 1s linear; }
+.pass__left { font-size: var(--fs-sm); color: var(--text-2); }
+
+/* Sello: el único momento animado de la app */
+.pass__seal {
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  padding: 4px 10px;
+  border: 2px solid var(--brand);
+  border-radius: 6px;
+  color: var(--brand);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  transform: rotate(-7deg);
+  opacity: 0.9;
+  animation: seal-in 420ms cubic-bezier(0.2, 0.9, 0.3, 1.3) 200ms both;
+}
+@keyframes seal-in {
+  from { transform: rotate(-7deg) scale(1.8); opacity: 0; }
+  to { transform: rotate(-7deg) scale(1); opacity: 0.9; }
+}
+
+/* Vencido */
+.pass.is-expired .pass__stub { background: var(--text-3); }
+.pass.is-expired .pass__bar span { background: var(--err); }
+.pass.is-expired .pass__seal { border-color: var(--err); color: var(--err); }
+
+@media (max-width: 420px) {
+  .pass { --stub-w: 64px; }
+  .pass__initial { font-size: 34px; }
+  .pass__body { padding: 20px 16px 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pass__seal { animation: none; }
+}

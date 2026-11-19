@@ -15,8 +15,8 @@ const REASONS: Record<string, string> = {
 const SERVICES: { key: ServiceKey; name: string }[] = [
   { key: 'auth', name: 'Authorization Server' },
   { key: 'gateway', name: 'API Gateway' },
-  { key: 'msa', name: 'Microservicio A' },
-  { key: 'msb', name: 'Microservicio B' },
+  { key: 'msa', name: 'Divisiónes' },
+  { key: 'msb', name: 'Carreras' },
 ];
 
 export default function Login() {

@@ -95,3 +95,23 @@
   .crud__id { width: 56px; }
   .toast { bottom: 16px; }
 }
+
+/* Alta con varios campos (Divisiones, Carreras) */
+.crud__form-label { font-size: 13px; font-weight: 500; color: var(--text-2); }
+.crud__row--wrap { flex-wrap: wrap; align-items: center; }
+.crud__field { flex: 1 1 160px; min-width: 0; display: grid; }
+.crud__field .input { width: 100%; }
+.crud__check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-2); white-space: nowrap; }
+.crud__edit { display: grid; gap: 4px; }
+
+.crud__head-actions { display: flex; gap: 8px; }
+.modal { border: 0; padding: 0; border-radius: var(--radius); background: var(--surface); color: var(--text); width: min(480px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(10, 58, 102, 0.3); }
+.modal::backdrop { background: rgba(10, 30, 55, 0.45); }
+.modal__form { display: grid; }
+.modal__head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.modal__head h2 { font-size: var(--fs-lg); }
+.modal__body { display: grid; gap: 14px; padding: 20px; }
+.modal__field { display: grid; gap: 6px; }
+.modal__field label { font-size: 13px; font-weight: 500; color: var(--text-2); }
+.modal__field .input { width: 100%; }
+.modal__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--line); background: var(--surface-2); border-radius: 0 0 var(--radius) var(--radius); }

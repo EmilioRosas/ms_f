@@ -10,8 +10,8 @@ interface NavItem {
 
 const LINKS: NavItem[] = [
   { to: '/', label: 'Inicio', end: true },
-  { to: '/entity-a', label: 'Entidad A' },
-  { to: '/entity-b', label: 'Entidad B' },
+  { to: '/entity-a', label: 'Divisiones' },
+  { to: '/entity-b', label: 'Carreras' },
   // { to: '/combinado', label: 'B con A' },
 ];
 

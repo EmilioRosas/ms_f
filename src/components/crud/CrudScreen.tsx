@@ -1,19 +1,28 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import Icon from '../Icon';
 import { useCrudResource } from '../../hooks/useCrudResource';
 import { errorText } from '../../api/httpClient';
-import { msaApi } from '../../api/msaApi';
-import type { CrudApi, EntityA } from '../../types';
+import type { CrudApi } from '../../types';
 
 import '../../styles/crud.css';
 
-const MAX_LEN = 120;
+/** Campo editable de un registro. `estado` no se declara: nunca se envía (activo por defecto). */
+export interface FieldDef {
+  /** clave en el JSON */
+  key: string;
+  label: string;
+  kind: 'text' | 'checkbox' | 'select';
+  /** máximo de caracteres (text) */
+  max?: number;
+  placeholder?: string;
+  /** select: permite dejarlo vacío (se envía null) */
+  optional?: boolean;
+  /** opciones (select): value = ID numérico */
+  options?: { value: number; label: string; hidden?: boolean }[];
+}
 
-/** Registro { id, <field> } de MS-A (nombreA) o MS-B (nombreB). */
-type Row<F extends string> = { id: number; entityAId?: number | null } & Record<F, string>;
-
-/** '' (sin A) o ID en texto → número o null. */
-const toAId = (v: string): number | null => (v ? Number(v) : null);
+type Values = Record<string, string | boolean>;
+type Errors = Record<string, string>;
 
 interface Toast {
   kind: 'ok' | 'error';
@@ -21,12 +30,42 @@ interface Toast {
   key: number;
 }
 
-function validateName(value: string): string | null {
-  const v = value.trim();
-  if (!v) return 'Escribe un nombre.';
-  if (v.length > MAX_LEN) return `Máximo ${MAX_LEN} caracteres.`;
-  return null;
+const get = (item: unknown, key: string): unknown => (item as Record<string, unknown>)[key];
+
+const blank = (fields: FieldDef[]): Values =>
+  Object.fromEntries(fields.map((f) => [f.key, f.kind === 'checkbox' ? false : '']));
+
+const fromItem = (fields: FieldDef[], item: unknown): Values =>
+  Object.fromEntries(
+    fields.map((f) => {
+      const v = get(item, f.key);
+      return [f.key, f.kind === 'checkbox' ? Boolean(v) : v == null ? '' : String(v)];
+    }),
+  );
+
+/** Todos los campos de texto y select son obligatorios. */
+function validate(fields: FieldDef[], values: Values): Errors {
+  const errors: Errors = {};
+  for (const f of fields) {
+    const v = values[f.key];
+    if (f.kind === 'text') {
+      const t = String(v).trim();
+      if (!t) errors[f.key] = `Escribe ${f.label.toLowerCase()}.`;
+      else if (f.max && t.length > f.max) errors[f.key] = `Máximo ${f.max} caracteres.`;
+    } else if (f.kind === 'select' && !f.optional && !v) {
+      errors[f.key] = `Elige ${f.label.toLowerCase()}.`;
+    }
+  }
+  return errors;
 }
+
+const payload = (fields: FieldDef[], values: Values): Record<string, unknown> =>
+  Object.fromEntries(
+    fields.map((f) => {
+      const v = values[f.key];
+      return [f.key, f.kind === 'checkbox' ? v : f.kind === 'select' ? (v ? Number(v) : null) : String(v).trim()];
+    }),
+  );
 
 type ParsedIds = { ids: number[]; error: null } | { ids: null; error: string };
 
@@ -40,60 +79,33 @@ function parseIds(text: string): ParsedIds {
   return { ids: [...new Set(ids)], error: null };
 }
 
-interface CrudScreenProps<F extends string> {
-  api: CrudApi<Row<F>>;
-  /** nombreA | nombreB */
-  field: F;
+interface CrudScreenProps<T extends { id: number }> {
+  api: CrudApi<T>;
+  fields: FieldDef[];
   /** prefijo para los ids de HTML */
   prefix: string;
   title: string;
   /** nombre del servicio para los mensajes */
   serviceName: string;
-  placeholder: string;
-  /** MS-B: permite elegir la entidad A a la que pertenece cada registro (uno a muchos). */
-  withA?: boolean;
+  /** aviso opcional bajo el formulario de alta */
+  notice?: string;
 }
 
-/** Pantalla CRUD genérica para un recurso { id, <field> } (MS-A, MS-B). */
-export default function CrudScreen<F extends string>({ api, field, prefix, title, serviceName, placeholder, withA = false }: CrudScreenProps<F>) {
+/** Pantalla CRUD genérica configurada por campos (Divisiones en MS-A, Carreras en MS-B). */
+export default function CrudScreen<T extends { id: number }>({ api, fields, prefix, title, serviceName, notice }: CrudScreenProps<T>) {
   const crud = useCrudResource(api);
   const { items, status, error, filter } = crud;
 
-  // Entidades A disponibles para relacionar (solo cuando withA).
-  const [aList, setAList] = useState<EntityA[]>([]);
-  const [aError, setAError] = useState<string | null>(null);
-  const [newA, setNewA] = useState('');
-  const [editA, setEditA] = useState('');
-  useEffect(() => {
-    if (!withA) return;
-    msaApi.listar().then(setAList).catch((e: unknown) => setAError(errorText(e)));
-  }, [withA]);
-  const aLabel = (id: number | null | undefined) => {
-    if (id == null) return 'Sin A';
-    const a = aList.find((x) => x.id === id);
-    return a ? `#${a.id} · ${a.nombreA}` : `#${id}`;
-  };
-  const aSelect = (id: string, value: string, onChange: (v: string) => void, label: string) => (
-    <select id={id} className="input" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
-      <option value="">Sin A</option>
-      {aList.map((a) => (
-        <option key={a.id} value={a.id}>#{a.id} · {a.nombreA}</option>
-      ))}
-    </select>
-  );
-
-  const createRef = useRef<HTMLInputElement>(null);
-  const [newName, setNewName] = useState('');
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [modal, setModal] = useState<{ id: number | null } | null>(null);
+  const [values, setValues] = useState<Values>(() => blank(fields));
+  const [errors, setErrors] = useState<Errors>({});
+  const [saving, setSaving] = useState(false);
 
   const [idQuery, setIdQuery] = useState('');
   const [idError, setIdError] = useState<string | null>(null);
   const [missingIds, setMissingIds] = useState<number[]>([]);
 
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [editError, setEditError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
@@ -104,27 +116,108 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
     return () => clearTimeout(t);
   }, [toast]);
 
+  useEffect(() => {
+    const d = dialogRef.current;
+    if (!d) return;
+    if (modal && !d.open) d.showModal();
+    if (!modal && d.open) d.close();
+  }, [modal]);
+
   const notify = (kind: Toast['kind'], text: string) => setToast({ kind, text, key: Date.now() });
 
-  // ---------- Crear ----------
-  const onCreate = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const err = validateName(newName);
-    setCreateError(err);
-    if (err) {
-      createRef.current?.focus();
-      return;
+  const labelOf = (f: FieldDef, value: unknown): string => {
+    if (f.kind === 'checkbox') return value ? 'Sí' : 'No';
+    if (f.kind === 'select') return f.options?.find((o) => o.value === value)?.label ?? '—';
+    return value == null || value === '' ? '—' : String(value);
+  };
+
+  /** Control de un campo (alta o edición). */
+  const control = (f: FieldDef, id: string, values: Values, set: (v: Values) => void, errs: Errors, setErrs: (e: Errors) => void, first = false): ReactNode => {
+    const change = (v: string | boolean) => {
+      set({ ...values, [f.key]: v });
+      if (errs[f.key]) setErrs({ ...errs, [f.key]: '' });
+    };
+    const invalid = !!errs[f.key];
+    if (f.kind === 'checkbox') {
+      return (
+        <label className="crud__check" htmlFor={id}>
+          <input id={id} type="checkbox" checked={Boolean(values[f.key])} onChange={(e) => change(e.target.checked)} />
+          {f.label}
+        </label>
+      );
     }
-    setCreating(true);
+    if (f.kind === 'select') {
+      return (
+        <select
+          id={id}
+          className="input"
+          value={String(values[f.key])}
+          onChange={(e) => change(e.target.value)}
+          aria-label={f.label}
+          aria-invalid={invalid}
+        >
+          <option value="">{f.optional ? `Sin ${f.label.toLowerCase()}` : `${f.label}…`}</option>
+          {(f.options ?? []).filter((o) => !o.hidden || String(o.value) === values[f.key]).map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      );
+    }
+    return (
+      <input
+        id={id}
+        autoFocus={first}
+        className="input"
+        placeholder={f.placeholder ?? f.label}
+        value={String(values[f.key])}
+        maxLength={(f.max ?? 120) + 1}
+        onChange={(e) => change(e.target.value)}
+        aria-label={f.label}
+        aria-invalid={invalid}
+        autoComplete="off"
+      />
+    );
+  };
+
+  // ---------- Nuevo / Editar (modal) ----------
+  const openCreate = () => {
+    setConfirmId(null);
+    setValues(blank(fields));
+    setErrors({});
+    setModal({ id: null });
+  };
+
+  const openEdit = (item: T) => {
+    setConfirmId(null);
+    setValues(fromItem(fields, item));
+    setErrors({});
+    setModal({ id: item.id });
+  };
+
+  const closeModal = () => {
+    if (!saving) setModal(null);
+  };
+
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!modal) return;
+    const errs = validate(fields, values);
+    setErrors(errs);
+    if (Object.keys(errs).length) return;
+    setSaving(true);
     try {
-      const created = await crud.create(newName.trim(), withA ? toAId(newA) : undefined);
-      setNewName('');
-      setNewA('');
-      notify('ok', `Registro #${created.id} agregado.`);
+      if (modal.id === null) {
+        const created = await crud.create(payload(fields, values));
+        notify('ok', `Registro #${created.id} agregado.`);
+      } else {
+        await crud.update(modal.id, payload(fields, values));
+        notify('ok', `Registro #${modal.id} guardado.`);
+      }
+      setModal(null);
     } catch (ex) {
       notify('error', errorText(ex));
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   };
 
@@ -134,7 +227,7 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
     const parsed = parseIds(idQuery);
     setIdError(parsed.error);
     if (parsed.error !== null) return;
-    cancelRowActions();
+    setConfirmId(null);
     setMissingIds(await crud.search(parsed.ids));
   };
 
@@ -144,36 +237,18 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
     crud.load();
   };
 
-  // ---------- Editar ----------
-  const startEdit = (item: Row<F>) => {
-    setConfirmId(null);
-    setEditingId(item.id);
-    setEditValue(item[field] ?? '');
-    setEditA(item.entityAId != null ? String(item.entityAId) : '');
-    setEditError(null);
-  };
-
-  const cancelRowActions = () => {
-    setEditingId(null);
-    setConfirmId(null);
-    setEditError(null);
-  };
-
-  const saveEdit = async (id: number) => {
-    const err = validateName(editValue);
-    setEditError(err);
-    if (err) return;
-    setBusyId(id);
+  const toggleEstado = async (item: T) => {
+    setBusyId(item.id);
     try {
-      await crud.update(id, editValue.trim(), withA ? toAId(editA) : undefined);
-      setEditingId(null);
-      notify('ok', `Registro #${id} guardado.`);
+      await crud.update(item.id, { ...payload(fields, fromItem(fields, item)), estado: !get(item, 'estado') });
     } catch (ex) {
       notify('error', errorText(ex));
     } finally {
       setBusyId(null);
     }
   };
+
+  const cancelRowActions = () => setConfirmId(null);
 
   // ---------- Eliminar ----------
   const confirmDelete = async (id: number) => {
@@ -189,15 +264,11 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
     }
   };
 
-  const rowKeys = (id: number) => (e: KeyboardEvent<HTMLTableRowElement>) => {
+  const rowKeys = () => (e: KeyboardEvent<HTMLTableRowElement>) => {
     if (e.key === 'Escape') cancelRowActions();
-    if (e.key === 'Enter' && editingId === id) {
-      e.preventDefault();
-      saveEdit(id);
-    }
   };
 
-  return (
+    return (
     <section className="crud" aria-labelledby={`${prefix}-title`}>
       <header className="crud__head">
         <div className="crud__heading">
@@ -210,42 +281,20 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
             )}
           </div>
         </div>
-        <button type="button" className="btn btn--ghost btn--sm" onClick={clearFilter} disabled={status === 'loading'}>
-          <Icon name="refresh" size={16} />
-          Recargar
-        </button>
+        <div className="crud__head-actions">
+          <button type="button" className="btn btn--ghost btn--sm" onClick={clearFilter} disabled={status === 'loading'}>
+            <Icon name="refresh" size={16} />
+            Recargar
+          </button>
+          <button type="button" className="btn btn--primary btn--sm" onClick={openCreate}>
+            <Icon name="plus" size={16} />
+            Nuevo
+          </button>
+        </div>
       </header>
 
       <div className="crud__panel">
         <div className="crud__toolbar">
-          <form className="crud__form" onSubmit={onCreate} noValidate>
-            <label htmlFor={`${prefix}-new`}>Nuevo registro</label>
-            <div className="crud__row">
-              <input
-                id={`${prefix}-new`}
-                ref={createRef}
-                className="input"
-                placeholder={placeholder}
-                value={newName}
-                maxLength={MAX_LEN + 1}
-                onChange={(e) => {
-                  setNewName(e.target.value);
-                  if (createError) setCreateError(null);
-                }}
-                aria-invalid={!!createError}
-                aria-describedby={createError ? `${prefix}-new-error` : undefined}
-                autoComplete="off"
-              />
-              {withA && aSelect(`${prefix}-new-a`, newA, setNewA, 'Entidad A del nuevo registro')}
-              <button type="submit" className="btn btn--primary btn--sm" disabled={creating}>
-                {creating ? <span className="spinner" aria-hidden="true" /> : <Icon name="plus" size={16} />}
-                Agregar
-              </button>
-            </div>
-            {createError && <span id={`${prefix}-new-error`} className="field-error">{createError}</span>}
-            {withA && aError && <span className="field-error">No se pudo cargar Entidad A: {aError}</span>}
-          </form>
-
           <form className="crud__form" onSubmit={onSearch} noValidate role="search">
             <label htmlFor={`${prefix}-ids`}>Buscar por ID</label>
             <div className="crud__row">
@@ -305,7 +354,7 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
             ) : (
               <>
                 <p className="crud__state-title">Aún no hay registros en {serviceName}</p>
-                <button type="button" className="btn btn--ghost btn--sm" onClick={() => createRef.current?.focus()}>
+                <button type="button" className="btn btn--ghost btn--sm" onClick={openCreate}>
                   <Icon name="plus" size={16} /> Agregar registro
                 </button>
               </>
@@ -318,8 +367,8 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
             <thead>
               <tr>
                 <th scope="col">ID</th>
-                <th scope="col">Nombre</th>
-                {withA && <th scope="col">Entidad A</th>}
+                {fields.map((f) => <th key={f.key} scope="col">{f.label}</th>)}
+                <th scope="col">Estado</th>
                 <th scope="col" className="crud__actions"><span className="sr-only">Acciones</span></th>
               </tr>
             </thead>
@@ -328,70 +377,53 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
                 ? [0, 1, 2, 3].map((i) => (
                     <tr key={i} aria-hidden="true">
                       <td className="crud__id"><div className="skel" style={{ width: 28 }} /></td>
-                      <td><div className="skel" style={{ width: `${40 + i * 12}%` }} /></td>
-                      {withA && <td><div className="skel" style={{ width: 80 }} /></td>}
+                      {Array.from({ length: fields.length + 1 }, (_, c) => (
+                        <td key={c}><div className="skel" style={{ width: `${40 + ((i + c) % 4) * 12}%` }} /></td>
+                      ))}
                       <td className="crud__actions"><div className="skel" style={{ width: 64 }} /></td>
                     </tr>
                   ))
                 : items.map((item) => {
-                    const editing = editingId === item.id;
                     const confirming = confirmId === item.id;
                     const busy = busyId === item.id;
+                    const estado = get(item, 'estado');
                     return (
                       <tr
                         key={item.id}
-                        className={editing ? 'is-editing' : confirming ? 'is-danger' : undefined}
-                        onKeyDown={rowKeys(item.id)}
+                        className={confirming ? 'is-danger' : undefined}
+                        onKeyDown={rowKeys()}
                       >
                         <td className="crud__id">#{item.id}</td>
 
-                        <td className="crud__name">
-                          {editing ? (
-                            <div className="crud__edit">
-                              <input
-                                className="input"
-                                value={editValue}
-                                autoFocus
-                                maxLength={MAX_LEN + 1}
-                                aria-label={`Nuevo nombre para el registro ${item.id}`}
-                                aria-invalid={!!editError}
-                                onChange={(e) => {
-                                  setEditValue(e.target.value);
-                                  if (editError) setEditError(null);
-                                }}
-                              />
-                              {editError && <span className="field-error">{editError}</span>}
-                            </div>
-                          ) : confirming ? (
-                            <span className="crud__confirm">
-                              ¿Eliminar <strong>{item[field]}</strong>? No se puede deshacer.
-                            </span>
-                          ) : (
-                            item[field]
-                          )}
-                        </td>
-
-                        {withA && (
-                          <td>
-                            {editing
-                              ? aSelect(`${prefix}-edit-a-${item.id}`, editA, setEditA, `Entidad A del registro ${item.id}`)
-                              : aLabel(item.entityAId)}
+                        {fields.map((f, i) => (
+                          <td key={f.key} className="crud__name">
+                            {confirming && i === 0 ? (
+                              <span className="crud__confirm">
+                                ¿Eliminar <strong>{labelOf(f, get(item, f.key))}</strong>? No se puede deshacer.
+                              </span>
+                            ) : (
+                              labelOf(f, get(item, f.key))
+                            )}
                           </td>
-                        )}
+                        ))}
+
+                        <td>
+                          {typeof estado === 'boolean' ? (
+                            <button
+                              type="button"
+                              className="btn btn--ghost btn--sm"
+                              onClick={() => toggleEstado(item)}
+                              disabled={busyId !== null}
+                              title={estado ? 'Desactivar' : 'Activar'}
+                            >
+                              {estado ? 'Activa' : 'Inactiva'}
+                            </button>
+                          ) : '—'}
+                        </td>
 
                         <td className="crud__actions">
                           <div className="crud__actions-inner">
-                            {editing ? (
-                              <>
-                                <button type="button" className="btn btn--primary btn--sm" onClick={() => saveEdit(item.id)} disabled={busy}>
-                                  {busy ? <span className="spinner" aria-hidden="true" /> : <Icon name="check" size={16} />}
-                                  Guardar
-                                </button>
-                                <button type="button" className="icon-btn" onClick={cancelRowActions} aria-label="Cancelar edición" title="Cancelar">
-                                  <Icon name="close" />
-                                </button>
-                              </>
-                            ) : confirming ? (
+                            {confirming ? (
                               <>
                                 <button type="button" className="btn btn--danger btn--sm" onClick={() => confirmDelete(item.id)} disabled={busy} autoFocus>
                                   {busy ? <span className="spinner" aria-hidden="true" /> : <Icon name="trash" size={16} />}
@@ -406,7 +438,7 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
                                 <button
                                   type="button"
                                   className="icon-btn"
-                                  onClick={() => startEdit(item)}
+                                  onClick={() => openEdit(item)}
                                   disabled={busyId !== null}
                                   aria-label={`Editar registro ${item.id}`}
                                   title="Editar"
@@ -416,7 +448,7 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
                                 <button
                                   type="button"
                                   className="icon-btn icon-btn--danger"
-                                  onClick={() => { setEditingId(null); setConfirmId(item.id); }}
+                                  onClick={() => setConfirmId(item.id)}
                                   disabled={busyId !== null}
                                   aria-label={`Eliminar registro ${item.id}`}
                                   title="Eliminar"
@@ -434,6 +466,36 @@ export default function CrudScreen<F extends string>({ api, field, prefix, title
           </table>
         )}
       </div>
+
+      <dialog ref={dialogRef} className="modal" onClose={() => setModal(null)} onCancel={(e) => { if (saving) e.preventDefault(); }} onClick={(e) => { if (e.target === dialogRef.current) closeModal(); }} aria-labelledby={`${prefix}-modal-title`}>
+        {modal && (
+          <form className="modal__form" onSubmit={onSubmit} noValidate>
+            <header className="modal__head">
+              <h2 id={`${prefix}-modal-title`}>{modal.id === null ? 'Nuevo registro' : `Editar registro #${modal.id}`}</h2>
+              <button type="button" className="icon-btn" onClick={closeModal} aria-label="Cerrar" title="Cerrar">
+                <Icon name="close" />
+              </button>
+            </header>
+            <div className="modal__body">
+              {fields.map((f, i) => (
+                <div key={f.key} className="modal__field">
+                  {f.kind !== 'checkbox' && <label htmlFor={`${prefix}-f-${f.key}`}>{f.label}</label>}
+                  {control(f, `${prefix}-f-${f.key}`, values, setValues, errors, setErrors, i === 0)}
+                  {errors[f.key] && <span className="field-error">{errors[f.key]}</span>}
+                </div>
+              ))}
+              {notice && <span className="field-error">{notice}</span>}
+            </div>
+            <footer className="modal__foot">
+              <button type="button" className="btn btn--ghost btn--sm" onClick={closeModal} disabled={saving}>Cancelar</button>
+              <button type="submit" className="btn btn--primary btn--sm" disabled={saving}>
+                {saving ? <span className="spinner" aria-hidden="true" /> : <Icon name="check" size={16} />}
+                Guardar
+              </button>
+            </footer>
+          </form>
+        )}
+      </dialog>
 
       <div aria-live="polite" aria-atomic="true">
         {toast && (

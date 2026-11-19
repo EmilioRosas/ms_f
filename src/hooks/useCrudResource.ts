@@ -5,7 +5,7 @@ import type { CrudApi, LoadStatus } from '../types';
 /**
  * Estado y operaciones CRUD para un recurso { id, <field> }.
  * `api` debe tener listar, crear, actualizar, eliminar y buscar; porIds es opcional.
- * Reutilizable por MS-A (nombreA) y MS-B (nombreB).
+ * Reutilizable por MS-A (Divisiones) y MS-B (Carreras).
  */
 export function useCrudResource<T extends { id: number }>(api: CrudApi<T>) {
   const [items, setItems] = useState<T[]>([]);
@@ -30,14 +30,14 @@ export function useCrudResource<T extends { id: number }>(api: CrudApi<T>) {
     load();
   }, [load]);
 
-  const create = async (value: string, entityAId?: number | null) => {
-    const created = await api.crear(value, entityAId);
+  const create = async (values: Record<string, unknown>) => {
+    const created = await api.crear(values);
     setItems((list) => [...list, created]);
     return created;
   };
 
-  const update = async (id: number, value: string, entityAId?: number | null) => {
-    const updated = await api.actualizar(id, value, entityAId);
+  const update = async (id: number, values: Record<string, unknown>) => {
+    const updated = await api.actualizar(id, values);
     setItems((list) => list.map((it) => (it.id === id ? updated : it)));
     return updated;
   };

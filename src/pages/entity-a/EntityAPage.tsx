@@ -1,16 +1,12 @@
-import CrudScreen from '../../components/crud/CrudScreen';
+import CrudScreen, { type FieldDef } from '../../components/crud/CrudScreen';
 import { msaApi } from '../../api/msaApi';
 
-// MS-A · /api/entity-a → { id, nombreA }. Búsqueda múltiple con POST /by-ids.
+const FIELDS: FieldDef[] = [
+  { key: 'nombre', label: 'Nombre', kind: 'text', max: 100, placeholder: 'Ej. División de Tecnologías' },
+  { key: 'descripcion', label: 'Descripción', kind: 'text', max: 200, placeholder: 'Descripción de la división' },
+];
+
+// MS-A · /api/entity-a → División { id, nombre, descripcion, estado }. Búsqueda múltiple con POST /by-ids.
 export default function EntityAPage() {
-  return (
-    <CrudScreen
-      api={msaApi}
-      field="nombreA"
-      prefix="msa"
-      title="Entidad A"
-      serviceName="Entidad A"
-      placeholder="Ej. Elemento A1"
-    />
-  );
+  return <CrudScreen api={msaApi} fields={FIELDS} prefix="msa" title="Divisiones" serviceName="Divisiones" />;
 }

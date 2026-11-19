@@ -18,17 +18,23 @@ export interface Session {
   user: JwtClaims | null;
 }
 
-/** MS-A · /api/entity-a */
-export interface EntityA {
+/** MS-A · /api/entity-a — División. (`publica` no se usa en el front.) */
+export interface Division {
   id: number;
-  nombreA: string;
+  nombre: string;
+  descripcion: string;
+  /** Activa por defecto: el front nunca lo envía. */
+  estado: boolean;
 }
 
-/** MS-B · /api/b */
-export interface EntityB {
+/** MS-B · /api/b — Carrera. Pertenece a una División (una división, muchas carreras). */
+export interface Carrera {
   id: number;
-  nombreB: string;
-  /** ID de la entidad A a la que pertenece (una A tiene muchas B); null = sin A. */
+  nombre: string;
+  descripcion: string;
+  intensiva: boolean;
+  estado: boolean;
+  /** ID de la división (MS-A); null = sin división. */
   entityAId: number | null;
 }
 
@@ -44,9 +50,9 @@ export interface EntityBConA {
 export interface CrudApi<T extends { id: number }> {
   listar: () => Promise<T[]>;
   buscar: (id: number) => Promise<T>;
-  /** `entityAId` solo lo usa MS-B (relación con A). */
-  crear: (value: string, entityAId?: number | null) => Promise<T>;
-  actualizar: (id: number, value: string, entityAId?: number | null) => Promise<T>;
+  /** `values` = campos del formulario (sin `estado`). */
+  crear: (values: Record<string, unknown>) => Promise<T>;
+  actualizar: (id: number, values: Record<string, unknown>) => Promise<T>;
   eliminar: (id: number) => Promise<unknown>;
   porIds?: (ids: number[]) => Promise<T[]>;
 }

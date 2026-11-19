@@ -6,15 +6,15 @@ import Icon from '../components/Icon';
 import { msaApi } from '../api/msaApi';
 import { msbApi } from '../api/msbApi';
 import { errorText } from '../api/httpClient';
-import type { EntityA, EntityB, EntityBConA } from '../types';
+import type { Division, Carrera, EntityBConA } from '../types';
 import './Dashboard.css';
 
 const NO_A = 'Sin dato de MSA';
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 interface Stats {
-  a: PromiseSettledResult<EntityA[]>;
-  b: PromiseSettledResult<EntityB[]>;
+  a: PromiseSettledResult<Division[]>;
+  b: PromiseSettledResult<Carrera[]>;
   combo: PromiseSettledResult<EntityBConA[]>;
 }
 
@@ -49,12 +49,12 @@ export default function Dashboard() {
   const rows: ServiceRow[] = [
     {
       to: '/entity-a',
-      name: 'Entidad A',
+      name: 'Divisiones',
       value: metric(stats?.a, (list) => plural(list.length, 'registro', 'registros')),
     },
     {
       to: '/entity-b',
-      name: 'Entidad B',
+      name: 'Carreras',
       value: metric(stats?.b, (list) => plural(list.length, 'registro', 'registros')),
     },
     // {

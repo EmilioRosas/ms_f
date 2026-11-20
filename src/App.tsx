@@ -6,8 +6,8 @@ import Callback from './pages/Callback';
 import Dashboard from './pages/Dashboard';
 import EntityAPage from './pages/entity-a/EntityAPage';
 import EntityBPage from './pages/entity-b/EntityBPage';
-import CombinedPage from './pages/combined/CombinedPage';
 import NotFound from './pages/NotFound';
+import AlumnoPage from './pages/alumno/AlumnoPage';
 
 export default function App() {
   return (
@@ -22,6 +22,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/entity-a" element={<EntityAPage />} />   {/* MS-A CRUD */}
           <Route path="/entity-b" element={<EntityBPage />} />   {/* MS-B CRUD */}
+          <Route path="/alumno" element={<AlumnoPage />} />   {/* ALUMNOS CRUD */}
           {/* <Route path="/combinado" element={<CombinedPage />} /> MS-B /con-a (Feign) */}
         </Route>
       </Route>

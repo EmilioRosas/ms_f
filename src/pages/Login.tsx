@@ -17,6 +17,7 @@ const SERVICES: { key: ServiceKey; name: string }[] = [
   { key: 'gateway', name: 'API Gateway' },
   { key: 'msa', name: 'Microservicio A' },
   { key: 'msb', name: 'Microservicio B' },
+  { key: 'alumno', name: 'Microservicio Alumnos' },
 ];
 
 export default function Login() {

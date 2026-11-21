@@ -38,6 +38,16 @@ export interface Carrera {
   entityAId: number | null;
 }
 
+/** Microservicio Asignaturas · /api/asignaturas */
+export interface Asignatura {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  estado: boolean;
+  carreraId: number;
+  nombreCarrera?: string | null;
+}
+
 /** MS-B · /api/b/con-a (OpenFeign → MS-A) */
 export interface EntityBConA {
   id: number;

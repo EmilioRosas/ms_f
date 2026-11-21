@@ -22,6 +22,7 @@ export default defineConfig({
       '/oauth2/token': target('http://localhost:9000'), // Authorization Server
       '/api/entity-a': target('http://localhost:8080'), // Gateway → MS-A
       '/api/b': target('http://localhost:8080'),        // Gateway → MS-B
+      '/api/asignaturas': target('http://localhost:8080'), // Gateway → asignaturas
     },
   },
 });

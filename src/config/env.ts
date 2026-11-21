@@ -9,6 +9,7 @@ export const env = {
   tokenEndpoint: e.VITE_TOKEN_ENDPOINT ?? '/oauth2/token',
   msaBase: e.VITE_MSA_BASE ?? '/api/entity-a',
   msbBase: e.VITE_MSB_BASE ?? '/api/b',
+  asignaturasBase: e.VITE_ASIGNATURAS_BASE ?? '/api/asignaturas',
   gatewayUrl: e.VITE_GATEWAY_URL ?? 'http://localhost:8080',
   msaUrl: e.VITE_MSA_URL ?? 'http://localhost:8081',
   msbUrl: e.VITE_MSB_URL ?? 'http://localhost:8082',

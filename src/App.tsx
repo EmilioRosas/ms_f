@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import EntityAPage from './pages/entity-a/EntityAPage';
 import EntityBPage from './pages/entity-b/EntityBPage';
 import AsignaturasPage from './pages/asignaturas/AsignaturasPage';
+import ServicioSocialPage from './pages/serviciosocial/ServicioSocialPage';
 import NotFound from './pages/NotFound';
 import AlumnoPage from './pages/alumno/AlumnoPage';
 
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/entity-b" element={<EntityBPage />} />   {/* MS-B CRUD */}
           <Route path="/alumno" element={<AlumnoPage />} />       {/* ALUMNOS CRUD */}
           <Route path="/asignaturas" element={<AsignaturasPage />} /> {/* ASIGNATURAS CRUD */}
+          <Route path="/servicio-social" element={<ServicioSocialPage />} />
         </Route>
       </Route>
 

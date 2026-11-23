@@ -78,6 +78,41 @@ export interface EntityAlumnoConAsignatura {
   nombreAsignatura: string | null;
 }
 
+/** Microservicio Servicio Social · /api/servicio-social */
+export interface ServicioSocial {
+  id: number;
+  alumnoId: number;
+  institucion: string;
+  programa: string;
+  horasAcumuladas: number;
+  horasTotales: number;
+  estado: string;
+  fechaInicio: string;
+  nombreAlumno?: string;
+  matricula?: string;
+}
+
+export interface ServicioSocialListDto extends ServicioSocial {
+  nombreAlumno: string;
+  matricula: string;
+}
+
+export interface StatusServicioSocial {
+  alumnoId: number;
+  servicioSocialId: number | null;
+  nombreAlumno: string;
+  matricula: string;
+  tieneServicio: boolean;
+  institucion: string | null;
+  programa: string | null;
+  horasAcumuladas: number;
+  horasTotales: number;
+  porcentajeAvance: number;
+  estado: string;
+  fechaInicio: string | null;
+  mensaje: string;
+}
+
 /** Operaciones que necesita la pantalla CRUD genérica. */
 export interface CrudApi<T extends { id: number }> {
   listar: () => Promise<T[]>;

@@ -11,9 +11,11 @@ export const env = {
   msbBase: e.VITE_MSB_BASE ?? '/api/b',
   alumnosBase: e.VITE_ALUMNOS_BASE ?? '/api/alumno',
   asignaturasBase: e.VITE_ASIGNATURAS_BASE ?? '/api/asignaturas',
+  servicioSocialBase: e.VITE_SERVICIO_SOCIAL_BASE ?? '/api/servicio-social',
   gatewayUrl: e.VITE_GATEWAY_URL ?? 'http://localhost:8080',
   msaUrl: e.VITE_MSA_URL ?? 'http://localhost:8081',
   msbUrl: e.VITE_MSB_URL ?? 'http://localhost:8082',
   alumnosUrl: e.VITE_ALUMNOS_URL ?? 'http://localhost:8083',
   asignaturasUrl: e.VITE_ASIGNATURAS_URL ?? 'http://localhost:8084',
+  servicioSocialUrl: e.VITE_SERVICIO_SOCIAL_URL ?? 'http://localhost:8085',
 } as const;

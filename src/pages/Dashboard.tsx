@@ -6,20 +6,19 @@ import Icon from '../components/Icon';
 import { msaApi } from '../api/msaApi';
 import { msbApi } from '../api/msbApi';
 import { alumnoApi } from '../api/alumnoApi';
+import { asignaturasApi } from '../api/asignaturasApi';
 import { errorText } from '../api/httpClient';
-import type { Division, Carrera, EntityBConA, Alumno } from '../types';
+import type { Division, Carrera, Alumno, Asignatura } from '../types';
 import './Dashboard.css';
 
-const NO_A = 'Sin dato de MSA';
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 interface Stats {
   a: PromiseSettledResult<Division[]>;
   b: PromiseSettledResult<Carrera[]>;
-  combo: PromiseSettledResult<EntityBConA[]>;
+  asignaturas: PromiseSettledResult<Asignatura[]>;
   alumnos: PromiseSettledResult<Alumno[]>;
 }
-// alumnoAsignatura: PromiseSettledResult<EntityAlumnoConAsignatura>;
 
 interface ServiceRow {
   to: string;
@@ -33,8 +32,13 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     setStats(null);
-    const [a, b, combo, alumnos] = await Promise.allSettled([msaApi.listar(), msbApi.listar(), msbApi.conA(), alumnoApi.listar()]);
-    setStats({ a, b, combo, alumnos });
+    const [a, b, asignaturas, alumnos] = await Promise.allSettled([
+      msaApi.listar(),
+      msbApi.listar(),
+      asignaturasApi.listar(),
+      alumnoApi.listar(),
+    ]);
+    setStats({ a, b, asignaturas, alumnos });
   }, []);
 
   useEffect(() => {
@@ -61,18 +65,15 @@ export default function Dashboard() {
       value: metric(stats?.b, (list) => plural(list.length, 'registro', 'registros')),
     },
     {
+      to: '/asignaturas',
+      name: 'Asignaturas',
+      value: metric(stats?.asignaturas, (list) => plural(list.length, 'registro', 'registros')),
+    },
+    {
       to: '/alumno',
       name: 'Alumnos',
       value: metric(stats?.alumnos, (list) => plural(list.length, 'registro', 'registros')),
     },
-    // {
-    //   to: '/combinado',
-    //   name: 'B con A',
-    //   value: metric(stats?.combo, (list) => {
-    //     const withA = list.filter((i) => i.nombreA && i.nombreA !== NO_A).length;
-    //     return list.length ? `${withA} de ${list.length} con dato de A` : 'Sin registros B';
-    //   }),
-    // },
   ];
 
   const partial = stats && Object.values(stats).some((r) => r.status === 'rejected');

@@ -5,7 +5,7 @@ import type { CrudApi, LoadStatus } from '../types';
 /**
  * Estado y operaciones CRUD para un recurso { id, <field> }.
  * `api` debe tener listar, crear, actualizar, eliminar y buscar; porIds es opcional.
- * Reutilizable por MS-A (Divisiones) y MS-B (Carreras).
+ * Reutilizable por MS-A (Divisiones), MS-B (Carreras) y Alumnos.
  */
 export function useCrudResource<T extends { id: number }>(api: CrudApi<T>) {
   const [items, setItems] = useState<T[]>([]);
@@ -18,7 +18,8 @@ export function useCrudResource<T extends { id: number }>(api: CrudApi<T>) {
     setError(null);
     setFilter(null);
     try {
-      setItems(await api.listar());
+      const data = await api.listar();
+      setItems(Array.isArray(data) ? data : []);
       setStatus('ready');
     } catch (e) {
       setError(errorText(e));
@@ -61,10 +62,11 @@ export function useCrudResource<T extends { id: number }>(api: CrudApi<T>) {
           .filter((r): r is PromiseFulfilledResult<Awaited<T>> => r.status === 'fulfilled')
           .map((r) => r.value);
       }
-      setItems(found);
+      const safeFound = Array.isArray(found) ? found : [];
+      setItems(safeFound);
       setFilter(ids);
       setStatus('ready');
-      const foundIds = new Set(found.map((f) => f.id));
+      const foundIds = new Set(safeFound.map((f) => f.id));
       return ids.filter((id) => !foundIds.has(id));
     } catch (e) {
       setError(errorText(e));

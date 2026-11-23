@@ -38,22 +38,27 @@ export interface Carrera {
   entityAId: number | null;
 }
 
-
+/** Microservicio Alumnos · /api/alumno */
 export interface Alumno {
   id: number;
   nombreAlumno: string;
   matricula: string;
   estadoAlumno: boolean;
+  estado?: boolean;
+  nombre?: string;
   /** ID de la asignatura (Asignatura); null = sin asignatura. */
   entityAsignaturaId: number | null;
+  asignaturaId?: number | null;
 }
 
 /** Microservicio Asignaturas · /api/asignaturas */
 export interface Asignatura {
   id: number;
   nombre: string;
+  nombreAsignatura?: string;
   descripcion: string | null;
   estado: boolean;
+  estadoAsignatura?: boolean;
   carreraId: number;
   nombreCarrera?: string | null;
 }

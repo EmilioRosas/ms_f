@@ -28,7 +28,7 @@ async function errorMessage(res: Response): Promise<string> {
     if (body.message) return body.message;
     if (body.error) return `${body.error} (${res.status})`;
   } catch {
-    if (text && text.length < 200) return text;
+    if (text && text.length < 200 && !text.includes('<html')) return text;
   }
   // El proxy de Vite responde 500 sin cuerpo cuando el gateway (:8080) está apagado.
   if (res.status >= 500) return 'El servicio no responde. Revisa que el API Gateway y los microservicios estén encendidos.';
@@ -43,7 +43,7 @@ interface ApiFetchOptions {
 
 /**
  * fetch con el Bearer token del Authorization Server.
- * Las rutas son relativas (/api/entity-a, /api/b) y pasan por el proxy de Vite.
+ * Las rutas son relativas (/api/entity-a, /api/b, /api/alumno, /api/asignaturas) y pasan por el proxy de Vite.
  */
 export async function apiFetch<T = unknown>(path: string, { method = 'GET', body, headers = {} }: ApiFetchOptions = {}): Promise<T> {
   const session = loadSession();
@@ -69,5 +69,13 @@ export async function apiFetch<T = unknown>(path: string, { method = 'GET', body
   if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
 
   const type = res.headers.get('content-type') || '';
-  return (type.includes('application/json') ? res.json() : res.text()) as Promise<T>;
+  if (type.includes('application/json')) {
+    return res.json() as Promise<T>;
+  }
+
+  const text = await res.text();
+  if (text.startsWith('<!doctype') || text.startsWith('<html') || text.includes('<html')) {
+    throw new ApiError(res.status, 'Ruta no encontrada en el API Gateway o proxy de Vite (se recibió HTML en lugar de JSON).');
+  }
+  return text as Promise<T>;
 }

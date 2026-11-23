@@ -7,8 +7,9 @@ import { msaApi } from '../api/msaApi';
 import { msbApi } from '../api/msbApi';
 import { alumnoApi } from '../api/alumnoApi';
 import { asignaturasApi } from '../api/asignaturasApi';
+import { servicioSocialApi } from '../api/servicioSocialApi';
 import { errorText } from '../api/httpClient';
-import type { Division, Carrera, Alumno, Asignatura } from '../types';
+import type { Division, Carrera, Alumno, Asignatura, ServicioSocial } from '../types';
 import './Dashboard.css';
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -18,6 +19,7 @@ interface Stats {
   b: PromiseSettledResult<Carrera[]>;
   asignaturas: PromiseSettledResult<Asignatura[]>;
   alumnos: PromiseSettledResult<Alumno[]>;
+  servicioSocial: PromiseSettledResult<ServicioSocial[]>;
 }
 
 interface ServiceRow {
@@ -32,13 +34,14 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     setStats(null);
-    const [a, b, asignaturas, alumnos] = await Promise.allSettled([
+    const [a, b, asignaturas, alumnos, servicioSocial] = await Promise.allSettled([
       msaApi.listar(),
       msbApi.listar(),
       asignaturasApi.listar(),
       alumnoApi.listar(),
+      servicioSocialApi.listar(),
     ]);
-    setStats({ a, b, asignaturas, alumnos });
+    setStats({ a, b, asignaturas, alumnos, servicioSocial });
   }, []);
 
   useEffect(() => {
@@ -73,6 +76,11 @@ export default function Dashboard() {
       to: '/alumno',
       name: 'Alumnos',
       value: metric(stats?.alumnos, (list) => plural(list.length, 'registro', 'registros')),
+    },
+    {
+      to: '/servicio-social',
+      name: 'Servicio Social',
+      value: metric(stats?.servicioSocial, (list) => plural(list.length, 'registro', 'registros')),
     },
   ];
 

@@ -20,10 +20,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/oauth2/token': target('http://localhost:9000'), // Authorization Server
-      '/api/entity-a': target('http://localhost:8080'), // Gateway → MS-A
-      '/api/b': target('http://localhost:8080'),        // Gateway → MS-B
-      '/api/alumno': target('http://localhost:8080'),   // Gateway → Alumnos
-      '/api/asignaturas': target('http://localhost:8080'), // Gateway → Asignaturas
+      '/api': target('http://localhost:8080'),          // Gateway → Todos los microservicios (:8080)
     },
   },
 });

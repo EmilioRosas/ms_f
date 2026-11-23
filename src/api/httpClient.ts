@@ -77,5 +77,5 @@ export async function apiFetch<T = unknown>(path: string, { method = 'GET', body
   if (text.startsWith('<!doctype') || text.startsWith('<html') || text.includes('<html')) {
     throw new ApiError(res.status, 'Ruta no encontrada en el API Gateway o proxy de Vite (se recibió HTML en lugar de JSON).');
   }
-  return text as Promise<T>;
+  return text as unknown as T;
 }

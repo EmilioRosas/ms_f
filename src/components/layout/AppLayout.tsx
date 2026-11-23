@@ -12,6 +12,7 @@ const LINKS: NavItem[] = [
   { to: '/', label: 'Inicio', end: true },
   { to: '/entity-a', label: 'Divisiones' },
   { to: '/entity-b', label: 'Carreras' },
+  { to: '/asignaturas', label: 'Asignaturas' },
   { to: '/alumno', label: 'Alumnos' },
   // { to: '/combinado', label: 'B con A' },
 ];

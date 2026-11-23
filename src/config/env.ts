@@ -10,7 +10,11 @@ export const env = {
   msaBase: e.VITE_MSA_BASE ?? '/api/entity-a',
   msbBase: e.VITE_MSB_BASE ?? '/api/b',
   asignaturasBase: e.VITE_ASIGNATURAS_BASE ?? '/api/asignaturas',
+  alumnosBase: e.VITE_ALUMNOS_BASE ?? '/api/alumno',
+  asignaturasBase: e.VITE_ASIGNATURAS_BASE ?? '/api/asignatura',
   gatewayUrl: e.VITE_GATEWAY_URL ?? 'http://localhost:8080',
   msaUrl: e.VITE_MSA_URL ?? 'http://localhost:8081',
   msbUrl: e.VITE_MSB_URL ?? 'http://localhost:8082',
+  alumnosUrl: e.VITE_ALUMNOS_URL ?? 'http://localhost:8083',
+  asignaturasUrl: e.VITE_ASIGNATURAS_URL ?? 'http://localhost:8084',
 } as const;

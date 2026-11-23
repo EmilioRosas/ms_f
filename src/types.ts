@@ -46,6 +46,19 @@ export interface Asignatura {
   estado: boolean;
   carreraId: number;
   nombreCarrera?: string | null;
+export interface Alumno {
+  id: number;
+  nombreAlumno: string;
+  matricula: string;
+  estadoAlumno: boolean;
+  /** ID de la asignatura (Asignatura); null = sin asignatura. */
+  entityAsignaturaId: number | null;
+}
+
+export interface Asignatura {
+  id: number;
+  nombreAsignatura: string;
+  estadoAsignatura: boolean;
 }
 
 /** MS-B · /api/b/con-a (OpenFeign → MS-A) */
@@ -54,6 +67,13 @@ export interface EntityBConA {
   nombreB: string;
   entityAId: number | null;
   nombreA: string | null;
+}
+
+export interface EntityAlumnoConAsignatura {
+  id: number;
+  nombreAlumno: string;
+  entityAsignaturaId: number | null;
+  nombreAsignatura: string | null;
 }
 
 /** Operaciones que necesita la pantalla CRUD genérica. */

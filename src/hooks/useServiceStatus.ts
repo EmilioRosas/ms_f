@@ -8,6 +8,7 @@ const SERVICES = {
   gateway: `${env.gatewayUrl}/`,
   msa: `${env.msaUrl}/api/entity-a`,
   msb: `${env.msbUrl}/api/b`,
+  alumno: `${env.alumnosUrl}/api/alumno`,
 };
 
 export type ServiceKey = keyof typeof SERVICES;

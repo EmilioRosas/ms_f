@@ -5,8 +5,9 @@ import AccessPass from '../components/pass/AccessPass';
 import Icon from '../components/Icon';
 import { msaApi } from '../api/msaApi';
 import { msbApi } from '../api/msbApi';
+import { alumnoApi } from '../api/alumnoApi';
 import { errorText } from '../api/httpClient';
-import type { Division, Carrera, EntityBConA } from '../types';
+import type { Division, Carrera, EntityBConA, Alumno } from '../types';
 import './Dashboard.css';
 
 const NO_A = 'Sin dato de MSA';
@@ -16,7 +17,9 @@ interface Stats {
   a: PromiseSettledResult<Division[]>;
   b: PromiseSettledResult<Carrera[]>;
   combo: PromiseSettledResult<EntityBConA[]>;
+  alumnos: PromiseSettledResult<Alumno[]>;
 }
+// alumnoAsignatura: PromiseSettledResult<EntityAlumnoConAsignatura>;
 
 interface ServiceRow {
   to: string;
@@ -30,8 +33,8 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     setStats(null);
-    const [a, b, combo] = await Promise.allSettled([msaApi.listar(), msbApi.listar(), msbApi.conA()]);
-    setStats({ a, b, combo });
+    const [a, b, combo, alumnos] = await Promise.allSettled([msaApi.listar(), msbApi.listar(), msbApi.conA(), alumnoApi.listar()]);
+    setStats({ a, b, combo, alumnos });
   }, []);
 
   useEffect(() => {
@@ -56,6 +59,11 @@ export default function Dashboard() {
       to: '/entity-b',
       name: 'Carreras',
       value: metric(stats?.b, (list) => plural(list.length, 'registro', 'registros')),
+    },
+    {
+      to: '/alumno',
+      name: 'Alumnos',
+      value: metric(stats?.alumnos, (list) => plural(list.length, 'registro', 'registros')),
     },
     // {
     //   to: '/combinado',

@@ -14,6 +14,8 @@ const LINKS: NavItem[] = [
   { to: '/entity-b', label: 'Carreras' },
   { to: '/asignaturas', label: 'Asignaturas' },
   { to: '/alumno', label: 'Alumnos' },
+  { to: '/maestros', label: 'Maestros' },
+  { to: '/grupos', label: 'Grupos' },
   { to: '/servicio-social', label: 'Servicio Social' },
   // { to: '/combinado', label: 'B con A' },
 ];

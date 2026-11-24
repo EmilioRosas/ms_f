@@ -10,6 +10,8 @@ import AsignaturasPage from './pages/asignaturas/AsignaturasPage';
 import ServicioSocialPage from './pages/serviciosocial/ServicioSocialPage';
 import NotFound from './pages/NotFound';
 import AlumnoPage from './pages/alumno/AlumnoPage';
+import MaestrosPage from './pages/maestros/MaestrosPage';
+import GruposPage from './pages/grupos/GruposPage';
 
 export default function App() {
   return (
@@ -26,6 +28,8 @@ export default function App() {
           <Route path="/entity-b" element={<EntityBPage />} />   {/* MS-B CRUD */}
           <Route path="/alumno" element={<AlumnoPage />} />       {/* ALUMNOS CRUD */}
           <Route path="/asignaturas" element={<AsignaturasPage />} /> {/* ASIGNATURAS CRUD */}
+          <Route path="/maestros" element={<MaestrosPage />} />   {/* MAESTROS + detalle */}
+          <Route path="/grupos" element={<GruposPage />} />       {/* GRUPOS + detalle */}
           <Route path="/servicio-social" element={<ServicioSocialPage />} />
         </Route>
       </Route>

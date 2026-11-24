@@ -113,6 +113,49 @@ export interface StatusServicioSocial {
   mensaje: string;
 }
 
+/** Microservicio Maestros · /api/maestros */
+export interface Maestro {
+  id: number;
+  nombre: string;
+  correo: string | null;
+  estado: boolean;
+  /** IDs de las asignaturas que imparte. */
+  asignaturaIds: number[];
+}
+
+/** /api/maestros/detalle: materias que da el maestro y a qué grupos. */
+export interface MaestroDetalle {
+  id: number;
+  nombre: string;
+  correo: string | null;
+  estado: boolean;
+  materias: { asignaturaId: number; nombreAsignatura: string; grupos: { id: number; nombre: string }[] }[];
+}
+
+/** /api/maestros/opciones: materia + maestro activo que la imparte (dropdown de grupos). */
+export interface OpcionMaestro {
+  asignaturaId: number;
+  nombreAsignatura: string;
+  maestroId: number;
+  nombreMaestro: string;
+}
+
+/** Microservicio Grupos · /api/grupos */
+export interface Grupo {
+  id: number;
+  nombre: string;
+  estado: boolean;
+  asignaciones: { asignaturaId: number; maestroId: number }[];
+}
+
+/** /api/grupos/detalle: materias del grupo y el maestro que las imparte. */
+export interface GrupoDetalle {
+  id: number;
+  nombre: string;
+  estado: boolean;
+  materias: { asignaturaId: number; nombreAsignatura: string; maestroId: number; nombreMaestro: string }[];
+}
+
 /** Operaciones que necesita la pantalla CRUD genérica. */
 export interface CrudApi<T extends { id: number }> {
   listar: () => Promise<T[]>;

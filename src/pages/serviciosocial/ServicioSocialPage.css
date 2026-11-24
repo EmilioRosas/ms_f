@@ -1,12 +1,57 @@
 /* Estilos específicos para la vista de Servicio Social */
 
+.ss__dialog {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.ss__grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ss__grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .ss__grid-2,
+  .ss__grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ss__sub {
+  font-size: 12.5px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+.ss__hours-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ss__pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
 .ss__progress-bar {
   width: 100%;
-  height: 8px;
-  background: var(--surface-2, #1e293b);
+  min-width: 120px;
+  height: 7px;
+  background: var(--surface-2);
   border-radius: 999px;
   overflow: hidden;
-  margin-top: 4px;
+  margin-top: 5px;
 }
 
 .ss__progress-fill {
@@ -16,15 +61,15 @@
 }
 
 .ss__progress-fill--process {
-  background: #38bdf8;
+  background: var(--cyan, #38bdf8);
 }
 
 .ss__progress-fill--done {
-  background: #22c55e;
+  background: var(--ok, #22c55e);
 }
 
 .ss__progress-fill--cancel {
-  background: #ef4444;
+  background: var(--err, #ef4444);
 }
 
 .ss__badge {
@@ -33,95 +78,27 @@
   gap: 4px;
   padding: 2px 8px;
   border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .ss__badge--process {
-  background: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: var(--info-bg);
+  color: var(--brand);
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
 }
 
 .ss__badge--done {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: var(--ok-bg);
+  color: var(--ok);
+  border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent);
 }
 
 .ss__badge--cancel {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-/* Modal de estatus */
-.ss__modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
-  display: grid;
-  place-items: center;
-  z-index: 100;
-  padding: 16px;
-}
-
-.ss__modal {
-  background: var(--surface, #0f172a);
-  border: 1px solid var(--line, #334155);
-  border-radius: 12px;
-  width: 100%;
-  max-width: 480px;
-  padding: 24px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-  display: grid;
-  gap: 16px;
-}
-
-.ss__modal-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.ss__modal-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text, #f8fafc);
-}
-
-.ss__modal-card {
-  background: var(--bg, #020617);
-  border: 1px solid var(--line, #1e293b);
-  border-radius: 8px;
-  padding: 16px;
-  display: grid;
-  gap: 12px;
-}
-
-.ss__modal-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 14px;
-}
-
-.ss__modal-label {
-  color: var(--text-2, #94a3b8);
-}
-
-.ss__modal-val {
-  font-weight: 500;
-  color: var(--text, #f8fafc);
-}
-
-.ss__modal-msg {
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: rgba(56, 189, 248, 0.1);
-  border-left: 3px solid #38bdf8;
-  font-size: 13px;
-  color: #e0f2fe;
+  background: var(--err-bg);
+  color: var(--err);
+  border: 1px solid color-mix(in srgb, var(--err) 30%, transparent);
 }

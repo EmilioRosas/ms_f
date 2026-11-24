@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { servicioSocialApi } from '../../api/servicioSocialApi';
 import { alumnoApi } from '../../api/alumnoApi';
 import { errorText } from '../../api/httpClient';
@@ -17,40 +17,74 @@ type FormValues = {
   fechaInicio: string;
 };
 
-const EMPTY: FormValues = {
+interface Toast {
+  kind: 'ok' | 'error';
+  text: string;
+  key: number;
+}
+
+const todayIso = () => new Date().toISOString().split('T')[0];
+
+const EMPTY = (): FormValues => ({
   alumnoId: '',
   institucion: '',
   programa: '',
   horasAcumuladas: 0,
   horasTotales: 480,
   estado: 'NO LIBERADO',
-  fechaInicio: new Date().toISOString().split('T')[0],
-};
+  fechaInicio: todayIso(),
+});
 
 export default function ServicioSocialPage() {
   const [items, setItems] = useState<ServicioSocialListDto[]>([]);
   const [alumnos, setAlumnos] = useState<Alumno[]>([]);
-  const [form, setForm] = useState<FormValues>(EMPTY);
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [alumnosNotice, setAlumnosNotice] = useState<string | null>(null);
+
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [modal, setModal] = useState<{ id: number | null } | null>(null);
+  const [form, setForm] = useState<FormValues>(() => EMPTY());
+  const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const [confirmId, setConfirmId] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [filterText, setFilterText] = useState('');
+
+  const [toast, setToast] = useState<Toast | null>(null);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const t = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  useEffect(() => {
+    const d = dialogRef.current;
+    if (!d) return;
+    if (modal && !d.open) d.showModal();
+    if (!modal && d.open) d.close();
+  }, [modal]);
+
+  const notify = (kind: Toast['kind'], text: string) => setToast({ kind, text, key: Date.now() });
 
   async function loadData() {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
+    setAlumnosNotice(null);
     try {
       const [listaServicios, listaAlumnos] = await Promise.all([
         servicioSocialApi.listarConAlumnos(),
-        alumnoApi.listar().catch(() => [] as Alumno[]),
+        alumnoApi.listar().catch((e: unknown) => {
+          setAlumnosNotice(`No se pudieron cargar los alumnos: ${errorText(e)}`);
+          return [] as Alumno[];
+        }),
       ]);
       setItems(listaServicios);
       setAlumnos(listaAlumnos);
     } catch (e) {
-      setError(errorText(e));
+      setLoadError(errorText(e));
     } finally {
       setLoading(false);
     }
@@ -61,20 +95,21 @@ export default function ServicioSocialPage() {
   }, []);
 
   function handleHorasChange(nuevasHoras: number) {
+    const limpias = Math.max(0, nuevasHoras);
     const horasTotales = form.horasTotales || 480;
     let nuevoEstado = form.estado;
-    if (nuevasHoras >= horasTotales) {
+    if (limpias >= horasTotales) {
       nuevoEstado = 'LIBERADO';
     } else if (form.estado === 'LIBERADO') {
-      nuevoEstado = nuevasHoras > 0 ? 'EN PROCESO' : 'NO LIBERADO';
-    } else if (nuevasHoras === 0) {
+      nuevoEstado = limpias > 0 ? 'EN PROCESO' : 'NO LIBERADO';
+    } else if (limpias === 0) {
       nuevoEstado = 'NO LIBERADO';
-    } else if (form.estado.includes('NO') && nuevasHoras > 0) {
+    } else if (form.estado.includes('NO') && limpias > 0) {
       nuevoEstado = 'EN PROCESO';
     }
     setForm((prev) => ({
       ...prev,
-      horasAcumuladas: nuevasHoras,
+      horasAcumuladas: limpias,
       estado: nuevoEstado,
     }));
   }
@@ -94,101 +129,116 @@ export default function ServicioSocialPage() {
     }));
   }
 
-  function resetForm() {
-    setForm(EMPTY);
-    setEditingId(null);
+  function openCreate() {
+    setConfirmId(null);
+    setForm(EMPTY());
+    setFormError(null);
+    setModal({ id: null });
   }
 
-  function edit(item: ServicioSocialListDto) {
-    setEditingId(item.id);
-    const est = item.estado ? item.estado.replace(/_/g, ' ') : 'NO LIBERADO';
+  function openEdit(item: ServicioSocialListDto) {
+    setConfirmId(null);
+    const est = item.estado ? item.estado.replace(/_/g, ' ').toUpperCase() : 'NO LIBERADO';
     setForm({
       alumnoId: String(item.alumnoId),
-      institucion: item.institucion,
-      programa: item.programa,
-      horasAcumuladas: item.horasAcumuladas,
-      horasTotales: item.horasTotales,
+      institucion: item.institucion ?? '',
+      programa: item.programa ?? '',
+      horasAcumuladas: item.horasAcumuladas ?? 0,
+      horasTotales: item.horasTotales ?? 480,
       estado: est,
-      fechaInicio: item.fechaInicio || new Date().toISOString().split('T')[0],
+      fechaInicio: item.fechaInicio && /^\d{4}-\d{2}-\d{2}$/.test(item.fechaInicio) ? item.fechaInicio : todayIso(),
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setFormError(null);
+    setModal({ id: item.id });
+  }
+
+  function closeModal() {
+    if (!saving) setModal(null);
   }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    setSaving(true);
-    setError(null);
-    setNotice(null);
+    if (!modal) return;
+    setFormError(null);
 
     const alumnoId = parseInt(form.alumnoId, 10);
-    if (!alumnoId) {
-      setError('Debes seleccionar un alumno.');
-      setSaving(false);
+    if (!alumnoId || alumnoId <= 0) {
+      setFormError('Selecciona un alumno.');
+      return;
+    }
+    if (!form.institucion.trim()) {
+      setFormError('Escribe la institución receptora.');
+      return;
+    }
+    if (!form.programa.trim()) {
+      setFormError('Escribe el nombre del programa.');
       return;
     }
 
+    setSaving(true);
     try {
       const payload = {
         alumnoId,
         institucion: form.institucion.trim(),
         programa: form.programa.trim(),
-        horasAcumuladas: Number(form.horasAcumuladas) || 0,
-        horasTotales: Number(form.horasTotales) || 480,
+        horasAcumuladas: Math.max(0, Number(form.horasAcumuladas) || 0),
+        horasTotales: Math.max(1, Number(form.horasTotales) || 480),
         estado: form.estado,
         fechaInicio: form.fechaInicio,
       };
 
-      if (editingId === null) {
-        await servicioSocialApi.crear(payload);
-        setNotice('Servicio Social registrado exitosamente.');
+      if (modal.id === null) {
+        const created = await servicioSocialApi.crear(payload);
+        notify('ok', `Registro #${created.id} agregado.`);
       } else {
-        await servicioSocialApi.actualizar(editingId, payload);
-        setNotice('Servicio Social actualizado exitosamente.');
+        await servicioSocialApi.actualizar(modal.id, payload);
+        notify('ok', `Registro #${modal.id} guardado.`);
       }
-      resetForm();
+      setModal(null);
       await loadData();
     } catch (err) {
-      setError(errorText(err));
+      setFormError(errorText(err));
     } finally {
       setSaving(false);
     }
   }
 
-  async function eliminar(id: number) {
-    if (!window.confirm(`¿Estás seguro de eliminar el registro de Servicio Social #${id}?`)) {
-      return;
-    }
+  async function confirmDelete(id: number) {
     setBusyId(id);
-    setError(null);
-    setNotice(null);
     try {
       await servicioSocialApi.eliminar(id);
-      setNotice(`Servicio Social #${id} eliminado correctamente.`);
-      if (editingId === id) resetForm();
+      setConfirmId(null);
+      notify('ok', `Registro #${id} eliminado.`);
       await loadData();
     } catch (err) {
-      setError(errorText(err));
+      notify('error', errorText(err));
     } finally {
       setBusyId(null);
     }
   }
 
-  // IDs de alumnos que ya tienen servicio social registrado (para avisar en el select)
+  const rowKeys = (e: KeyboardEvent<HTMLTableRowElement>) => {
+    if (e.key === 'Escape') setConfirmId(null);
+  };
+
+  // IDs de alumnos que ya tienen servicio social registrado
   const alumnosConServicioIds = useMemo(() => {
     return new Set(items.map((i) => i.alumnoId));
   }, [items]);
 
-  // Filtrado de la tabla
+  // Filtrado por texto o por ID
   const filteredItems = useMemo(() => {
-    if (!filterText.trim()) return items;
-    const q = filterText.toLowerCase();
+    const raw = filterText.trim();
+    if (!raw) return items;
+    const q = raw.toLowerCase();
     return items.filter(
       (i) =>
+        String(i.id) === raw.replace(/^#/, '') ||
         i.nombreAlumno?.toLowerCase().includes(q) ||
         i.matricula?.toLowerCase().includes(q) ||
         i.institucion?.toLowerCase().includes(q) ||
         i.programa?.toLowerCase().includes(q) ||
-        String(i.id).includes(q)
+        i.estado?.toLowerCase().includes(q),
     );
   }, [items, filterText]);
 
@@ -196,262 +246,402 @@ export default function ServicioSocialPage() {
     <section className="crud" aria-labelledby="ss-title">
       <header className="crud__head">
         <div className="crud__heading">
-          <h1 id="ss-title">Servicio Social</h1>
-          <p className="muted">Administración y seguimiento del Servicio Social de alumnos.</p>
-        </div>
-        <button
-          type="button"
-          className="btn btn--ghost btn--sm"
-          onClick={() => void loadData()}
-          disabled={loading}
-        >
-          <Icon name="refresh" size={16} /> Recargar
-        </button>
-      </header>
-
-      {error && <div className="alert alert--error" role="alert">{error}</div>}
-      {notice && <div className="alert alert--info" role="status">{notice}</div>}
-
-      {/* Formulario de Alta / Edición */}
-      <section className="crud__panel">
-        <form className="modal__body" onSubmit={submit}>
-          <h2>{editingId === null ? 'Registrar Servicio Social' : `Editar Servicio Social #${editingId}`}</h2>
-
-          <div className="modal__grid">
-            <div className="modal__field">
-              <label htmlFor="ss-alumno">Alumno *</label>
-              <select
-                id="ss-alumno"
-                className="input"
-                required
-                value={form.alumnoId}
-                onChange={(e) => setForm({ ...form, alumnoId: e.target.value })}
-                disabled={editingId !== null} // En edición no cambiamos el alumno para evitar duplicados
-              >
-                <option value="">Selecciona un alumno...</option>
-                {alumnos.map((a) => {
-                  const yaTiene = alumnosConServicioIds.has(a.id);
-                  return (
-                    <option key={a.id} value={a.id} disabled={yaTiene && editingId === null}>
-                      {a.nombreAlumno} ({a.matricula}){yaTiene ? ' — (Ya tiene servicio)' : ''}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <div className="modal__field">
-              <label htmlFor="ss-estado">Estado *</label>
-              <select
-                id="ss-estado"
-                className="input"
-                required
-                value={form.estado}
-                onChange={(e) => setForm({ ...form, estado: e.target.value })}
-              >
-                <option value="NO LIBERADO">No Liberado</option>
-                <option value="EN PROCESO">En Proceso</option>
-                <option value="LIBERADO">Liberado</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="modal__grid">
-            <div className="modal__field">
-              <label htmlFor="ss-institucion">Institución *</label>
-              <input
-                id="ss-institucion"
-                className="input"
-                maxLength={150}
-                required
-                value={form.institucion}
-                onChange={(e) => setForm({ ...form, institucion: e.target.value })}
-                placeholder="Ej. DIF Municipal, Hospital General"
-              />
-            </div>
-
-            <div className="modal__field">
-              <label htmlFor="ss-programa">Programa *</label>
-              <input
-                id="ss-programa"
-                className="input"
-                maxLength={150}
-                required
-                value={form.programa}
-                onChange={(e) => setForm({ ...form, programa: e.target.value })}
-                placeholder="Ej. Apoyo Comunitario Digital"
-              />
-            </div>
-          </div>
-
-          <div className="modal__grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-            <div className="modal__field">
-              <label htmlFor="ss-horas-acum">Horas Acumuladas</label>
-              <input
-                id="ss-horas-acum"
-                type="number"
-                min={0}
-                max={form.horasTotales || 480}
-                className="input"
-                value={form.horasAcumuladas}
-                onChange={(e) => handleHorasChange(parseInt(e.target.value, 10) || 0)}
-              />
-            </div>
-
-            <div className="modal__field">
-              <label htmlFor="ss-horas-totales">Horas Totales</label>
-              <input
-                id="ss-horas-totales"
-                type="number"
-                min={1}
-                className="input"
-                value={form.horasTotales}
-                onChange={(e) => handleHorasTotalesChange(parseInt(e.target.value, 10) || 480)}
-              />
-            </div>
-
-            <div className="modal__field">
-              <label htmlFor="ss-fecha">Fecha de Inicio</label>
-              <input
-                id="ss-fecha"
-                type="date"
-                className="input"
-                value={form.fechaInicio}
-                onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="crud__head-actions" style={{ marginTop: '8px' }}>
-            <button className="btn btn--primary btn--sm" type="submit" disabled={saving}>
-              {saving ? 'Guardando...' : editingId === null ? 'Registrar Servicio' : 'Guardar Cambios'}
-            </button>
-            {editingId !== null && (
-              <button className="btn btn--ghost btn--sm" type="button" onClick={resetForm}>
-                Cancelar Edición
-              </button>
+          <div className="crud__title">
+            <h1 id="ss-title">Servicio Social</h1>
+            {!loading && !loadError && (
+              <span className="crud__count">
+                {items.length} {items.length === 1 ? 'registro' : 'registros'}
+              </span>
             )}
           </div>
-        </form>
-      </section>
+          <p className="muted">Administración y seguimiento de horas y liberación de Servicio Social.</p>
+        </div>
 
-      {/* Tabla de Registros */}
-      <section className="crud__panel">
+        <div className="crud__head-actions">
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={() => {
+              setFilterText('');
+              void loadData();
+            }}
+            disabled={loading}
+          >
+            <Icon name="refresh" size={16} />
+            Recargar
+          </button>
+          <button type="button" className="btn btn--primary btn--sm" onClick={openCreate}>
+            <Icon name="plus" size={16} />
+            Nuevo
+          </button>
+        </div>
+      </header>
+
+      {alumnosNotice && (
+        <div className="alert alert--warn" role="status">
+          {alumnosNotice}
+        </div>
+      )}
+
+      <div className="crud__panel">
         <div className="crud__toolbar" style={{ gridTemplateColumns: '1fr' }}>
-          <div className="crud__row">
-            <input
-              type="search"
-              className="input"
-              placeholder="Buscar por alumno, matrícula, institución o programa..."
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-            />
+          <div className="crud__form">
+            <label htmlFor="ss-search">Buscar servicio social</label>
+            <div className="crud__row">
+              <input
+                id="ss-search"
+                type="search"
+                className="input"
+                placeholder="Buscar por ID, alumno, matrícula, institución o programa..."
+                value={filterText}
+                onChange={(e) => setFilterText(e.target.value)}
+                autoComplete="off"
+              />
+              {filterText && (
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => setFilterText('')}>
+                  Limpiar
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {loading ? (
-          <div className="crud__state"><p>Cargando registros de Servicio Social...</p></div>
-        ) : filteredItems.length === 0 ? (
+        {loadError ? (
+          <div className="crud__state" role="alert">
+            <p className="crud__state-title">No se pudieron cargar los registros</p>
+            <p>{loadError}</p>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => void loadData()}>
+              <Icon name="refresh" size={16} /> Reintentar
+            </button>
+          </div>
+        ) : !loading && filteredItems.length === 0 ? (
           <div className="crud__state">
-            <p className="crud__state-title">No hay registros de Servicio Social.</p>
+            {filterText ? (
+              <>
+                <p className="crud__state-title">No hay registros que coincidan con la búsqueda</p>
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => setFilterText('')}>
+                  Ver todos
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="crud__state-title">Aún no hay registros en Servicio Social</p>
+                <button type="button" className="btn btn--ghost btn--sm" onClick={openCreate}>
+                  <Icon name="plus" size={16} /> Agregar registro
+                </button>
+              </>
+            )}
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="crud__table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Alumno</th>
-                  <th>Institución</th>
-                  <th>Programa</th>
-                  <th>Horas</th>
-                  <th>Avance</th>
-                  <th>Estado</th>
-                  <th>Fecha Inicio</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredItems.map((item) => {
-                  const pct = Math.min(100, Math.round((item.horasAcumuladas / (item.horasTotales || 480)) * 100));
-                  const estNorm = (item.estado || '').replace(/_/g, ' ').toUpperCase();
-                  const isLiberado = estNorm === 'LIBERADO';
-                  const isNoLiberado = estNorm.includes('NO');
-                  const badgeClass = isLiberado
-                    ? 'ss__badge--done'
-                    : isNoLiberado
-                    ? 'ss__badge--cancel'
-                    : 'ss__badge--process';
-
-                  const fillClass = isLiberado
-                    ? 'ss__progress-fill--done'
-                    : isNoLiberado
-                    ? 'ss__progress-fill--cancel'
-                    : 'ss__progress-fill--process';
-
-                  return (
-                    <tr key={item.id}>
-                      <td className="crud__id">#{item.id}</td>
-                      <td>
-                        <strong>{item.nombreAlumno || `Alumno #${item.alumnoId}`}</strong>
-                        {item.matricula && (
-                          <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>
-                            Mat: {item.matricula}
-                          </div>
-                        )}
+          <table className="crud__table" aria-busy={loading}>
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Alumno</th>
+                <th scope="col">Institución / Programa</th>
+                <th scope="col">Avance</th>
+                <th scope="col">Estado</th>
+                <th scope="col" className="crud__actions">
+                  <span className="sr-only">Acciones</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading
+                ? [0, 1, 2, 3].map((i) => (
+                    <tr key={i} aria-hidden="true">
+                      <td className="crud__id">
+                        <div className="skel" style={{ width: 28 }} />
                       </td>
-                      <td>{item.institucion}</td>
-                      <td>{item.programa}</td>
-                      <td>
-                        <strong>{item.horasAcumuladas}</strong> / {item.horasTotales} hrs
-                      </td>
-                      <td style={{ minWidth: '120px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                          <span>{pct}%</span>
-                        </div>
-                        <div className="ss__progress-bar">
-                          <div
-                            className={`ss__progress-fill ${fillClass}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`ss__badge ${badgeClass}`}>
-                          {estNorm || '—'}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: '13px', color: 'var(--text-2)' }}>
-                        {item.fechaInicio || '—'}
-                      </td>
-                      <td>
-                        <div className="crud__actions-inner" style={{ display: 'flex', gap: '6px' }}>
-                          <button
-                            type="button"
-                            className="btn btn--ghost btn--sm"
-                            onClick={() => edit(item)}
-                            disabled={busyId !== null}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn--ghost btn--sm icon-btn--danger"
-                            onClick={() => void eliminar(item.id)}
-                            disabled={busyId !== null}
-                          >
-                            Eliminar
-                          </button>
-                        </div>
+                      {[0, 1, 2, 3].map((c) => (
+                        <td key={c}>
+                          <div className="skel" style={{ width: `${50 + ((i + c) % 3) * 15}%` }} />
+                        </td>
+                      ))}
+                      <td className="crud__actions">
+                        <div className="skel" style={{ width: 64 }} />
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))
+                : filteredItems.map((item) => {
+                    const confirming = confirmId === item.id;
+                    const busy = busyId === item.id;
+                    const totales = item.horasTotales || 480;
+                    const pct = Math.min(100, Math.round(((item.horasAcumuladas || 0) / totales) * 100));
+                    const estNorm = (item.estado || '').replace(/_/g, ' ').toUpperCase();
+                    const isLiberado = estNorm === 'LIBERADO';
+                    const isNoLiberado = estNorm.includes('NO');
+
+                    const badgeClass = isLiberado
+                      ? 'ss__badge--done'
+                      : isNoLiberado
+                        ? 'ss__badge--cancel'
+                        : 'ss__badge--process';
+
+                    const fillClass = isLiberado
+                      ? 'ss__progress-fill--done'
+                      : isNoLiberado
+                        ? 'ss__progress-fill--cancel'
+                        : 'ss__progress-fill--process';
+
+                    const alumnoLabel = item.nombreAlumno || `Alumno #${item.alumnoId}`;
+
+                    return (
+                      <tr key={item.id} className={confirming ? 'is-danger' : undefined} onKeyDown={rowKeys}>
+                        <td className="crud__id">#{item.id}</td>
+
+                        <td className="crud__name">
+                          {confirming ? (
+                            <span className="crud__confirm">
+                              ¿Eliminar servicio social de <strong>{alumnoLabel}</strong>? No se puede deshacer.
+                            </span>
+                          ) : (
+                            <>
+                              <div>
+                                <strong>{alumnoLabel}</strong>
+                              </div>
+                              {item.matricula && <div className="ss__sub mono">Mat: {item.matricula}</div>}
+                            </>
+                          )}
+                        </td>
+
+                        <td className="crud__name">
+                          <div>{item.institucion || '—'}</div>
+                          {item.programa && <div className="ss__sub">{item.programa}</div>}
+                        </td>
+
+                        <td>
+                          <div className="ss__hours-head">
+                            <span>
+                              <strong>{item.horasAcumuladas}</strong> / {totales} hrs
+                            </span>
+                            <span className="ss__pct">{pct}%</span>
+                          </div>
+                          <div className="ss__progress-bar">
+                            <div className={`ss__progress-fill ${fillClass}`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </td>
+
+                        <td>
+                          <span className={`ss__badge ${badgeClass}`}>{estNorm || '—'}</span>
+                          {item.fechaInicio && <div className="ss__sub">Inicio: {item.fechaInicio}</div>}
+                        </td>
+
+                        <td className="crud__actions">
+                          <div className="crud__actions-inner">
+                            {confirming ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn btn--danger btn--sm"
+                                  onClick={() => void confirmDelete(item.id)}
+                                  disabled={busy}
+                                  autoFocus
+                                >
+                                  {busy ? <span className="spinner" aria-hidden="true" /> : <Icon name="trash" size={16} />}
+                                  Eliminar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  onClick={() => setConfirmId(null)}
+                                  aria-label="Cancelar eliminación"
+                                  title="Cancelar"
+                                >
+                                  <Icon name="close" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  onClick={() => openEdit(item)}
+                                  disabled={busyId !== null}
+                                  aria-label={`Editar registro ${item.id}`}
+                                  title="Editar"
+                                >
+                                  <Icon name="edit" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="icon-btn icon-btn--danger"
+                                  onClick={() => setConfirmId(item.id)}
+                                  disabled={busyId !== null}
+                                  aria-label={`Eliminar registro ${item.id}`}
+                                  title="Eliminar"
+                                >
+                                  <Icon name="trash" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Modal de Alta / Edición igual al resto del sistema */}
+      <dialog
+        ref={dialogRef}
+        className="modal ss__dialog"
+        onClose={() => setModal(null)}
+        onCancel={(e) => {
+          if (saving) e.preventDefault();
+        }}
+        onClick={(e) => {
+          if (e.target === dialogRef.current) closeModal();
+        }}
+        aria-labelledby="ss-modal-title"
+      >
+        {modal && (
+          <form className="modal__form" onSubmit={submit} noValidate>
+            <header className="modal__head">
+              <h2 id="ss-modal-title">
+                {modal.id === null ? 'Nuevo servicio social' : `Editar servicio social #${modal.id}`}
+              </h2>
+              <button type="button" className="icon-btn" onClick={closeModal} aria-label="Cerrar" title="Cerrar">
+                <Icon name="close" />
+              </button>
+            </header>
+
+            <div className="modal__body">
+              <div className="ss__grid-2">
+                <div className="modal__field">
+                  <label htmlFor="ss-alumno">Alumno</label>
+                  <select
+                    id="ss-alumno"
+                    className="input"
+                    required
+                    value={form.alumnoId}
+                    onChange={(e) => setForm({ ...form, alumnoId: e.target.value })}
+                  >
+                    <option value="">Selecciona un alumno…</option>
+                    {alumnos.map((a) => {
+                      const yaTieneOtro =
+                        alumnosConServicioIds.has(a.id) &&
+                        (modal.id === null || String(a.id) !== form.alumnoId);
+                      return (
+                        <option key={a.id} value={a.id} disabled={yaTieneOtro}>
+                          {a.nombreAlumno} ({a.matricula}){yaTieneOtro ? ' — Ya tiene servicio' : ''}
+                        </option>
+                      );
+                    })}
+                    {modal.id !== null &&
+                      form.alumnoId &&
+                      !alumnos.some((a) => String(a.id) === form.alumnoId) && (
+                        <option value={form.alumnoId}>Alumno #{form.alumnoId}</option>
+                      )}
+                  </select>
+                </div>
+
+                <div className="modal__field">
+                  <label htmlFor="ss-estado">Estado</label>
+                  <select
+                    id="ss-estado"
+                    className="input"
+                    value={form.estado}
+                    onChange={(e) => setForm({ ...form, estado: e.target.value })}
+                  >
+                    <option value="NO LIBERADO">No Liberado</option>
+                    <option value="EN PROCESO">En Proceso</option>
+                    <option value="LIBERADO">Liberado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal__field">
+                <label htmlFor="ss-institucion">Institución receptora</label>
+                <input
+                  id="ss-institucion"
+                  className="input"
+                  maxLength={150}
+                  required
+                  value={form.institucion}
+                  onChange={(e) => setForm({ ...form, institucion: e.target.value })}
+                  placeholder="Ej. DIF Municipal, Hospital General"
+                />
+              </div>
+
+              <div className="modal__field">
+                <label htmlFor="ss-programa">Programa</label>
+                <input
+                  id="ss-programa"
+                  className="input"
+                  maxLength={150}
+                  required
+                  value={form.programa}
+                  onChange={(e) => setForm({ ...form, programa: e.target.value })}
+                  placeholder="Ej. Apoyo Comunitario Digital"
+                />
+              </div>
+
+              <div className="ss__grid-3">
+                <div className="modal__field">
+                  <label htmlFor="ss-horas-acum">Horas acumuladas</label>
+                  <input
+                    id="ss-horas-acum"
+                    type="number"
+                    min={0}
+                    max={form.horasTotales || 480}
+                    className="input"
+                    value={form.horasAcumuladas}
+                    onChange={(e) => handleHorasChange(parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+
+                <div className="modal__field">
+                  <label htmlFor="ss-horas-totales">Horas totales</label>
+                  <input
+                    id="ss-horas-totales"
+                    type="number"
+                    min={1}
+                    className="input"
+                    value={form.horasTotales}
+                    onChange={(e) => handleHorasTotalesChange(parseInt(e.target.value, 10) || 480)}
+                  />
+                </div>
+
+                <div className="modal__field">
+                  <label htmlFor="ss-fecha">Fecha de inicio</label>
+                  <input
+                    id="ss-fecha"
+                    type="date"
+                    className="input"
+                    value={form.fechaInicio}
+                    onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {formError && <span className="field-error">{formError}</span>}
+            </div>
+
+            <footer className="modal__foot">
+              <button type="button" className="btn btn--ghost btn--sm" onClick={closeModal} disabled={saving}>
+                Cancelar
+              </button>
+              <button type="submit" className="btn btn--primary btn--sm" disabled={saving}>
+                {saving ? <span className="spinner" aria-hidden="true" /> : <Icon name="check" size={16} />}
+                Guardar
+              </button>
+            </footer>
+          </form>
+        )}
+      </dialog>
+
+      <div aria-live="polite" aria-atomic="true">
+        {toast && (
+          <div key={toast.key} className={`toast toast--${toast.kind}`} role={toast.kind === 'error' ? 'alert' : 'status'}>
+            <Icon name={toast.kind === 'error' ? 'close' : 'check'} size={16} />
+            {toast.text}
           </div>
         )}
-      </section>
+      </div>
     </section>
   );
 }
